@@ -1,3 +1,4 @@
+"use client";
 import { Button } from "@/components/ui/button";
 import { Search, Bell, Settings, Wallet } from "lucide-react";
 import { WalletPopover } from "./WalletPopover";
@@ -38,7 +39,6 @@ export const Header = () => {
         {/* Authentication State */}
         {authenticated ? (
           <WalletPopover 
-            address={user?.wallet?.address || "Connected"} 
             onDisconnect={logout} 
           />
         ) : (

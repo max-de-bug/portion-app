@@ -5,7 +5,7 @@ import { PrivyProvider } from "@privy-io/react-auth";
 export default function Providers({ children }: { children: React.ReactNode }) {
   return (
     <PrivyProvider
-      appId="INSERT_PRIVY_APP_ID"
+      appId="cmk48opg601hkjr0cuyqwv983"
       config={{
         appearance: {
           theme: "light",
@@ -13,7 +13,13 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           logo: "https://your-logo-url.com/logo.png", // Placeholder or local asset if available
         },
         loginMethods: ["wallet", "email", "sms"],
-        solanaClusters: [{ name: "mainnet-beta", rpcUrl: "https://api.mainnet-beta.solana.com" }],
+        solana: {
+          rpcs: {
+             "mainnet-beta": {
+                url: "https://api.mainnet-beta.solana.com",
+             }
+          }
+        },
       }}
     >
       {children}

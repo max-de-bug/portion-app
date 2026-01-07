@@ -166,7 +166,7 @@ function Scene() {
       ))}
       
       {/* Background Particles for depth */}
-      <Points count={500} positions={new Float32Array(500 * 3).map(() => (Math.random() - 0.5) * 40)}>
+      <Points positions={new Float32Array(500 * 3).map(() => (Math.random() - 0.5) * 40)}>
          <PointMaterial transparent color="#00A3FF" size={0.03} opacity={0.1} />
       </Points>
     </>

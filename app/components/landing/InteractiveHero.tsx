@@ -4,16 +4,17 @@ import React, { useState, useEffect, useRef } from "react";
 import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
 import { Zap, Shield, Wallet, CreditCard, Cpu, Globe, Database } from "lucide-react";
 
+// Updated coordinates: Moved everything up by ~40 units (Center Y: 75 -> 35)
 const MERCHANT_NODES = [
-  { id: "openai", icon: Cpu, label: "OpenAI", x: 88, y: 60 },
-  { id: "aws", icon: Globe, label: "AWS", x: 92, y: 75 },
-  { id: "vercel", icon: Database, label: "Vercel", x: 88, y: 90 },
+  { id: "openai", icon: Cpu, label: "OpenAI", x: 88, y: 20 },
+  { id: "aws", icon: Globe, label: "AWS", x: 92, y: 35 },
+  { id: "vercel", icon: Database, label: "Vercel", x: 88, y: 50 },
 ];
 
 const PRINCIPAL_NODES = [
-  { id: "p1", x: 8, y: 60 },
-  { id: "p2", x: 12, y: 75 },
-  { id: "p3", x: 8, y: 90 },
+  { id: "p1", x: 8, y: 20 },
+  { id: "p2", x: 12, y: 35 },
+  { id: "p3", x: 8, y: 50 },
 ];
 
 export const InteractiveHero = () => {
@@ -65,7 +66,7 @@ export const InteractiveHero = () => {
       />
 
       {/* Radial Background Glow - Subtle Light */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.1),transparent_70%)]" />
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(16,185,129,0.1),transparent_70%)]" />
 
       {/* Custom Cursor Glow */}
       <motion.div
@@ -91,15 +92,22 @@ export const InteractiveHero = () => {
               <feMergeNode in="SourceGraphic" />
             </feMerge>
           </filter>
+          <filter id="shield-glow">
+            <feGaussianBlur stdDeviation="2" result="coloredBlur" />
+            <feMerge>
+              <feMergeNode in="coloredBlur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
         </defs>
 
-        {/* Vault Center Positioned lower (y=75) to avoid overlap with hero text */}
+        {/* Vault Center Positioned higher (y=35) to meet Get Started button */}
         <g transform="translate(0, 0)"> 
           {/* Connections from Principal to Vault */}
           {PRINCIPAL_NODES.map((node) => (
             <motion.path
               key={`p-v-${node.id}`}
-              d={`M ${node.x} ${node.y} L 50 75`}
+              d={`M ${node.x} ${node.y} L 50 35`}
               stroke="#d1fae5"
               strokeWidth="0.2"
               fill="none"
@@ -129,20 +137,20 @@ export const InteractiveHero = () => {
           {MERCHANT_NODES.map((merchant) => (
             <g key={`v-m-path-${merchant.id}`}>
               <motion.path
-                d={`M 50 75 L ${merchant.x} ${merchant.y}`}
+                d={`M 50 35 L ${merchant.x} ${merchant.y}`}
                 stroke={isDetected ? "#10b98133" : "#d1fae5"}
                 strokeWidth="0.3"
                 fill="none"
               />
               {isDetected && (
                 <motion.path
-                  d={`M 50 75 L ${merchant.x} ${merchant.y}`}
+                  d={`M 50 35 L ${merchant.x} ${merchant.y}`}
                   stroke="#10b981"
                   strokeWidth="0.5"
                   fill="none"
                   strokeDasharray="1, 4"
                   animate={{ strokeDashoffset: [0, -20] }}
-                  transition={{ duration: 8, repeat: Infinity, ease: "linear" }}
+                  transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
                   filter="url(#glow)"
                 />
               )}
@@ -150,17 +158,18 @@ export const InteractiveHero = () => {
           ))}
 
 
-          {/* Central Vault Hub - Lowered to 75% Y */}
+          {/* Central Vault Hub - Elevated to 35% Y */}
           <motion.g
             onHoverStart={() => setIsDetected(true)}
             onHoverEnd={() => setIsDetected(false)}
             className="cursor-pointer"
-            initial={{ scale: 0, y: 75 }}
-            animate={{ scale: 1, x: 50, y: 75 }}
+            initial={{ scale: 0, y: 35 }}
+            animate={{ scale: 1, x: 50, y: 35 }}
             transition={{ type: "spring", stiffness: 260, damping: 20 }}
           >
+            {/* Outer rotating ring */}
             <motion.circle
-              r="7"
+              r="8"
               fill="none"
               stroke="#10b981"
               strokeWidth="0.2"
@@ -169,35 +178,48 @@ export const InteractiveHero = () => {
               transition={{ duration: 30, repeat: Infinity, ease: "linear" }}
             />
             
+            {/* Pulsing Core Background */}
             <motion.circle 
-                r="5" 
+                r="6" 
                 fill="white" 
                 stroke="#10b981" 
                 strokeWidth="0.5" 
                 animate={{
-                    scale: [1, 1.2, 1, 1.2, 1],
-                    strokeWidth: [0.5, 2, 0.5, 2, 0.5],
-                    filter: ["none", "drop-shadow(0 0 8px rgba(16,185,129,0.8))", "none", "drop-shadow(0 0 15px rgba(16,185,129,1))", "none"]
+                    scale: [1, 1.1, 1],
+                    strokeWidth: [0.5, 1.5, 0.5],
+                    filter: ["none", "drop-shadow(0 0 10px rgba(16,185,129,0.5))", "none"]
                 }}
-                transition={{ duration: 1.5, ease: "easeInOut", times: [0, 0.2, 0.4, 0.6, 1] }} 
-                key={pulseTrigger} // Trigger animation on key change
+                transition={{ duration: 2, ease: "easeInOut", repeat: Infinity }} 
             />
             
-            <motion.g animate={{ scale: isDetected ? 1.15 : 1 }}>
-              <foreignObject x="-3.5" y="-3.5" width="7" height="7">
+            {/* Central Content */}
+            <motion.g 
+              animate={{ scale: isDetected ? 1.1 : 1 }}
+              transition={{ type: "spring", stiffness: 300, damping: 20 }}
+            >
+              <foreignObject x="-5" y="-5" width="10" height="10">
                 <div className="w-full h-full flex items-center justify-center">
-                  <Shield className={`w-4 h-4 transition-colors duration-500 ${isDetected ? 'text-emerald-500' : 'text-emerald-300'}`} />
+                  <motion.div
+                    animate={{ 
+                      filter: isDetected ? "drop-shadow(0 0 8px rgba(16,185,129,0.6))" : "none"
+                    }}
+                  >
+                    <Shield 
+                      className={`w-8 h-8 transition-colors duration-500 ${isDetected ? 'text-emerald-500 fill-emerald-100' : 'text-emerald-400 fill-transparent'}`} 
+                      strokeWidth={1.5}
+                    />
+                  </motion.div>
                 </div>
               </foreignObject>
             </motion.g>
 
             <motion.text
-              y="10"
+              y="12"
               textAnchor="middle"
               fill="#064e3b"
               fontSize="2"
               className="font-black tracking-[0.2em] uppercase pointer-events-none"
-              animate={{ opacity: isDetected ? 1 : 0.4 }}
+              animate={{ opacity: isDetected ? 1 : 0.6, y: isDetected ? 13 : 12 }}
             >
               {isDetected ? "FLOWS ACTIVE" : "DETECT YIELD"}
             </motion.text>
@@ -220,7 +242,8 @@ export const InteractiveHero = () => {
                 strokeWidth="0.5"
                 animate={{ 
                   scale: activeMerchant === merchant.id ? 1.2 : 1,
-                  stroke: activeMerchant === merchant.id ? "#10b981" : "#d1fae5"
+                  stroke: activeMerchant === merchant.id ? "#10b981" : "#d1fae5",
+                  filter: activeMerchant === merchant.id ? "url(#glow)" : "none"
                 }}
               />
               <foreignObject x={merchant.x - 1.75} y={merchant.y - 1.75} width="3.5" height="3.5">
@@ -244,18 +267,14 @@ export const InteractiveHero = () => {
         </g>
       </svg>
 
-      {/* Side HUDs - Updated to Light Emerald Theme */}
-      <div className="absolute top-1/2 left-8 -translate-y-1/2 flex flex-col gap-4 pointer-events-none z-10">
-        {/* Removed Total Principal HUD as requested */}
-      </div>
-
+      {/* Side HUDs - Updated position to match new center */}
       <AnimatePresence>
         {isDetected && (
           <motion.div
             initial={{ opacity: 0, x: 20 }}
             animate={{ opacity: 1, x: 0 }}
             exit={{ opacity: 0, x: 20 }}
-            className="absolute top-1/2 right-8 -translate-y-1/2 flex flex-col gap-4 pointer-events-none z-10"
+            className="absolute top-[35%] right-8 -translate-y-1/2 flex flex-col gap-4 pointer-events-none z-10"
           >
             <div className="p-4 bg-white/90 border border-emerald-200 rounded-2xl backdrop-blur-xl shadow-lg">
               <p className="text-[10px] text-emerald-600 font-black tracking-widest uppercase mb-1">Detected Yield</p>

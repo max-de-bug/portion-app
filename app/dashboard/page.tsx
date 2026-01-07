@@ -1,9 +1,9 @@
-import { Sidebar } from "../components/Sidebar";
-import { Header } from "../components/Header";
-import { StatCard } from "../components/StatCard";
-import { StreamingValue } from "../components/StreamingValue";
-import { ActiveStreams } from "../components/ActiveStreams";
-import { YieldPerformance } from "../components/YieldPerformance";
+import { Sidebar } from "./Sidebar";
+import { Header } from "./Header";
+import { StatCard } from "./StatCard";
+import { StreamingValue } from "./StreamingValue";
+import { ActiveStreams } from "./ActiveStreams";
+import { YieldPerformance } from "./YieldPerformance";
 import { Zap, DollarSign, Activity, Shield } from "lucide-react";
 
 export default function Dashboard() {

@@ -5,21 +5,22 @@ import { motion, AnimatePresence } from "framer-motion";
 import { 
   Copy, 
   LogOut, 
-  Wallet, 
   ChevronDown, 
-  ExternalLink,
   DollarSign,
   Zap,
   Layers
 } from "lucide-react";
-import { Button } from "@/components/ui/button";
+
+
+import { usePrivy } from "@privy-io/react-auth";
 
 interface WalletPopoverProps {
-  address: string;
   onDisconnect: () => void;
 }
 
-export const WalletPopover = ({ address = "Es7b..7kVh", onDisconnect }: WalletPopoverProps) => {
+export const WalletPopover = ({ onDisconnect }: WalletPopoverProps) => {
+  const { user } = usePrivy();
+  const address = user?.wallet?.address || "";
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("home");
   const [copied, setCopied] = useState(false);

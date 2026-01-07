@@ -5,8 +5,6 @@ import {
   Eye,
   EyeOff,
   Zap,
-  TrendingUp,
-  Clock,
   Play,
   ArrowDownToLine,
   ArrowUpFromLine,

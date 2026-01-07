@@ -14,7 +14,14 @@ import {
 } from "lucide-react";
 import { useState } from "react";
 
-const navItems = [
+interface NavItem {
+  icon: any;
+  label: string;
+  active?: boolean;
+  badge?: string;
+}
+
+const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", active: true },
   { icon: Wallet, label: "Wallet" },
   { icon: TrendingUp, label: "Yield" },
