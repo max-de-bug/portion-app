@@ -1,6 +1,7 @@
 "use client";
 
 import { PrivyProvider } from "@privy-io/react-auth";
+import { createSolanaRpc, createSolanaRpcSubscriptions } from "@solana/kit";
 import { NetworkProvider } from "./context/NetworkContext";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
@@ -17,8 +18,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
           loginMethods: ["wallet", "email", "sms"],
           solana: {
             rpcs: {
-              "mainnet-beta": {
-                url: "https://api.mainnet-beta.solana.com",
+              "solana:mainnet": {
+                rpc: createSolanaRpc("https://api.mainnet-beta.solana.com"),
+                rpcSubscriptions: createSolanaRpcSubscriptions("wss://api.mainnet-beta.solana.com"),
               },
             },
           },
