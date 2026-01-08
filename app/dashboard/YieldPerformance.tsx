@@ -1,8 +1,8 @@
 import { TrendingUp } from "lucide-react";
 
 export const YieldPerformance = () => {
-  // Mock chart data points for visual representation
-  const chartData = [35, 45, 42, 55, 48, 62, 58, 72, 68, 78, 75, 85];
+  // Empty chart data for now
+  const chartData = [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0];
 
   return (
     <div className="glass-card rounded-2xl p-5">
@@ -10,9 +10,9 @@ export const YieldPerformance = () => {
       <div className="flex items-center justify-between mb-4">
         <div className="flex items-center gap-3">
           <h3 className="font-semibold text-foreground">Yield Performance (Detected)</h3>
-          <span className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-accent text-primary rounded-full">
+          <span className="flex items-center gap-1 px-2 py-0.5 text-xs font-medium bg-muted text-muted-foreground rounded-full">
             <TrendingUp className="w-3 h-3" />
-            +24.5%
+            0.0%
           </span>
         </div>
         <div className="flex items-center gap-2">
@@ -31,13 +31,13 @@ export const YieldPerformance = () => {
         </div>
       </div>
 
-      {/* Simple Chart Visualization */}
-      <div className="relative h-32 flex items-end justify-between gap-1 mt-6">
+      {/* Simple Chart Visualization - Empty State */}
+      <div className="relative h-32 flex items-end justify-between gap-1 mt-6 opacity-30">
         {chartData.map((value, index) => (
           <div
             key={index}
-            className="flex-1 bg-gradient-to-t from-primary/60 to-primary rounded-t transition-all duration-300 hover:from-primary/80 hover:to-success"
-            style={{ height: `${value}%` }}
+            className="flex-1 bg-muted rounded-t transition-all duration-300"
+            style={{ height: `10%` }} 
           />
         ))}
       </div>

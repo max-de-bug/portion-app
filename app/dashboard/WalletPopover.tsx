@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   Copy, 
@@ -10,7 +10,7 @@ import {
   Zap,
   Layers
 } from "lucide-react";
-
+import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 
 import { usePrivy } from "@privy-io/react-auth";
 
@@ -20,10 +20,39 @@ interface WalletPopoverProps {
 
 export const WalletPopover = ({ onDisconnect }: WalletPopoverProps) => {
   const { user } = usePrivy();
-  const address = user?.wallet?.address || "";
+  
+  // Find specifically the Solana wallet address from linked accounts
+  const solanaWallet = user?.linkedAccounts?.find(
+    (account) => account.type === 'wallet' && account.chainType === 'solana'
+  ) as { address: string } | undefined;
+  
+  const address = solanaWallet?.address || user?.wallet?.address || "";
+  const shortenedAddress = address ? `${address.slice(0, 4)}...${address.slice(-4)}` : "";
+
   const [isOpen, setIsOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("home");
   const [copied, setCopied] = useState(false);
+  const [solBalance, setSolBalance] = useState<string>("0.0000");
+
+  useEffect(() => {
+    const fetchBalance = async () => {
+      if (address) {
+        try {
+          const connection = new Connection("https://api.mainnet-beta.solana.com");
+          const publicKey = new PublicKey(address);
+          const balance = await connection.getBalance(publicKey);
+          setSolBalance((balance / LAMPORTS_PER_SOL).toFixed(4));
+        } catch (error) {
+          console.error("Failed to fetch SOL balance:", error);
+          setSolBalance("0.0000");
+        }
+      }
+    };
+
+    if (isOpen && address) {
+        fetchBalance();
+    }
+  }, [isOpen, address]);
 
   const handleCopy = () => {
     navigator.clipboard.writeText(address);
@@ -43,7 +72,7 @@ export const WalletPopover = ({ onDisconnect }: WalletPopoverProps) => {
         <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#8ba1f5] to-[#c084fc] flex items-center justify-center">
            <span className="text-[8px] font-bold text-white">👻</span>
         </div>
-        <span className="text-sm font-medium text-gray-700">{address}</span>
+        <span className="text-sm font-medium text-gray-700">{shortenedAddress}</span>
         <ChevronDown className={`w-3 h-3 text-gray-400 transition-transform ${isOpen ? "rotate-180" : ""}`} />
       </button>
 
@@ -85,7 +114,7 @@ export const WalletPopover = ({ onDisconnect }: WalletPopoverProps) => {
                 </div>
                 
                 <div className="px-3 py-1 rounded-full bg-[#d1f4e8] text-[#059669] text-xs font-bold font-mono border border-[#a7f3d0]">
-                  {address}
+                  {shortenedAddress}
                 </div>
               </div>
 
@@ -95,7 +124,7 @@ export const WalletPopover = ({ onDisconnect }: WalletPopoverProps) => {
                   <div className="w-8 h-8 rounded-xl bg-[#a78bfa] flex items-center justify-center text-white">
                     👻
                   </div>
-                  <span className="font-bold text-lg text-gray-800">{address}</span>
+                  <span className="font-bold text-lg text-gray-800">{shortenedAddress}</span>
                   <Copy className={`w-4 h-4 ${copied ? "text-green-500" : "text-gray-400 group-hover:text-gray-600"}`} />
                 </div>
 
@@ -127,6 +156,17 @@ export const WalletPopover = ({ onDisconnect }: WalletPopoverProps) => {
                         <span className="font-medium text-gray-600">sUSDv</span>
                       </div>
                       <span className="font-bold text-gray-900 text-lg">0.0000</span>
+                    </div>
+
+                    {/* SOL (Solana) - REAL TIME */}
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className="w-8 h-8 rounded-full bg-[#14F195] flex items-center justify-center text-white border-2 border-[#000000]/10">
+                          <span className="font-bold text-xs text-black">SOL</span>
+                        </div>
+                        <span className="font-medium text-gray-600">SOL</span>
+                      </div>
+                      <span className="font-bold text-gray-900 text-lg">{solBalance}</span>
                     </div>
 
                     {/* SOLO */}

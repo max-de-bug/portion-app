@@ -1,43 +1,7 @@
 import { ArrowRight, Shield, Coins, FileText, Zap, Activity } from "lucide-react";
 
-const yields = [
-  {
-    type: "sUSDv Staking Pool",
-    icon: Coins,
-    rate: "$8.17/hr",
-    amount: "$2,450.00",
-    status: "Active",
-    isPrivate: true,
-    destination: "sUSDv Vault",
-  },
-  {
-    type: "YaaS (Liquid Yield)",
-    icon: Zap,
-    rate: "$4.12/hr",
-    amount: "$1,234.50",
-    status: "Active",
-    isPrivate: true,
-    destination: "Direct Wallet",
-  },
-  {
-    type: "$SOLO Native Staking",
-    icon: Shield,
-    rate: "$6.94/hr",
-    amount: "5,000.00 SOLO",
-    status: "Active",
-    isPrivate: true,
-    destination: "Staking Hub",
-  },
-  {
-    type: "USDV/SOL LP Rewards",
-    icon: Activity,
-    rate: "$2.45/hr",
-    amount: "$840.00",
-    status: "Active",
-    isPrivate: false,
-    destination: "Solv Vault",
-  },
-];
+// Mock data removed. Initialize with empty array for production readiness.
+const yields: any[] = [];
 
 export const ActiveStreams = () => {
   const liveCount = yields.filter((s) => s.status === "Active").length;
@@ -61,60 +25,19 @@ export const ActiveStreams = () => {
       <div className="h-1.5 w-full bg-muted rounded-full mb-5 overflow-hidden">
         <div
           className="h-full bg-gradient-to-r from-primary to-success rounded-full transition-all duration-1000"
-          style={{ width: "75%" }}
+          style={{ width: "0%" }}
         />
       </div>
 
-      {/* Yield List */}
-      <div className="space-y-3">
-        {yields.map((yieldItem, index) => (
-          <div
-            key={index}
-            className="p-4 rounded-xl bg-muted border border-border hover:border-primary/20 transition-all group"
-          >
-            <div className="flex items-start justify-between">
-              <div className="flex items-start gap-3">
-                <div className="w-9 h-9 rounded-lg bg-accent flex items-center justify-center">
-                  <yieldItem.icon className="w-4 h-4 text-primary" />
-                </div>
-                <div>
-                  <div className="flex items-center gap-2 mb-0.5">
-                    <p className="text-sm font-medium text-foreground">
-                      {yieldItem.type}
-                    </p>
-                    <ArrowRight className="w-3 h-3 text-muted-foreground" />
-                    <p className="text-sm text-muted-foreground">
-                      {yieldItem.destination}
-                    </p>
-                  </div>
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs text-muted-foreground">
-                      ◎ {yieldItem.rate}
-                    </span>
-                    {yieldItem.isPrivate && (
-                      <span className="flex items-center gap-1 text-xs text-primary">
-                        <Shield className="w-3 h-3" />
-                        Private
-                      </span>
-                    )}
-                  </div>
-                </div>
-              </div>
-              <div className="text-right">
-                <p className="text-sm font-semibold text-foreground">
-                  {yieldItem.amount}
-                </p>
-                <p
-                  className={`text-xs font-medium ${
-                    yieldItem.status === "Active" ? "text-primary" : "text-warning"
-                  }`}
-                >
-                  {yieldItem.status}
-                </p>
-              </div>
-            </div>
-          </div>
-        ))}
+      {/* Yield List - Empty State */}
+      <div className="flex flex-col items-center justify-center h-[200px] text-center space-y-3 opacity-60">
+        <div className="w-12 h-12 rounded-full bg-muted flex items-center justify-center">
+            <Zap className="w-6 h-6 text-muted-foreground" />
+        </div>
+        <div>
+            <p className="font-medium text-foreground">No active streams</p>
+            <p className="text-sm text-muted-foreground">Connect wallet to detect yield sources</p>
+        </div>
       </div>
     </div>
   );

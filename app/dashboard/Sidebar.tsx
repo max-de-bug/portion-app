@@ -13,22 +13,25 @@ import {
   Home,
 } from "lucide-react";
 import { useState } from "react";
+import Link from "next/link";
+import { usePathname } from "next/navigation";
 
 interface NavItem {
   icon: any;
   label: string;
-  active?: boolean;
+  href: string;
   badge?: string;
 }
 
 const navItems: NavItem[] = [
-  { icon: LayoutDashboard, label: "Dashboard", active: true },
-  { icon: Wallet, label: "Wallet" },
-  { icon: TrendingUp, label: "Yield" },
+  { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
+  { icon: Wallet, label: "Wallet", href: "/dashboard/wallet" },
+  { icon: TrendingUp, label: "Yield", href: "/dashboard/yield" },
 ];
 
 export const Sidebar = () => {
   const [privacyMode, setPrivacyMode] = useState(true);
+  const pathname = usePathname();
 
   return (
     <aside className="w-[220px] h-screen bg-sidebar border-r border-sidebar-border flex flex-col fixed left-0 top-0 z-50">
@@ -74,39 +77,41 @@ export const Sidebar = () => {
           Menu
         </p>
         <ul className="space-y-1 mb-auto">
-          {navItems.map((item) => (
-            <li key={item.label}>
-              <button
-                className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
-                  item.active
-                    ? "bg-primary text-white"
-                    : "text-muted-foreground hover:text-foreground hover:bg-muted"
-                }`}
-              >
-                <item.icon className="w-4 h-4" />
-                <span>{item.label}</span>
-                {item.badge && (
-                  <span className="ml-auto px-1.5 py-0.5 text-[10px] font-medium bg-primary/20 text-primary rounded-full">
-                    {item.badge}
-                  </span>
-                )}
-              </button>
-            </li>
-          ))}
+          {navItems.map((item) => {
+            const isActive = pathname === item.href;
+            return (
+              <li key={item.label}>
+                <Link
+                  href={item.href}
+                  className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                    isActive
+                      ? "bg-primary text-white"
+                      : "text-muted-foreground hover:text-foreground hover:bg-muted"
+                  }`}
+                >
+                  <item.icon className="w-4 h-4" />
+                  <span>{item.label}</span>
+                  {item.badge && (
+                    <span className="ml-auto px-1.5 py-0.5 text-[10px] font-medium bg-primary/20 text-primary rounded-full">
+                      {item.badge}
+                    </span>
+                  )}
+                </Link>
+              </li>
+            );
+          })}
         </ul>
 
         {/* Back to Landing - Pushed to bottom of nav area */}
         <div className="mt-4 pt-4 border-t border-sidebar-border">
-           <a href="/landing">
-            <button className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all">
+           <Link href="/landing">
+            <div className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all cursor-pointer">
               <Home className="w-4 h-4" />
-              <span>Back to Website</span>
-            </button>
-          </a>
+              <span>Back to the main page</span>
+            </div>
+          </Link>
         </div>
       </nav>
-
-
 
       {/* Wallet Connection */}
       <div className="p-4 border-t border-sidebar-border">

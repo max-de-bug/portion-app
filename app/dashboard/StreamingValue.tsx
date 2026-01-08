@@ -44,7 +44,7 @@ export const StreamingValue = () => {
           </div>
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent border border-primary/20">
             <Zap className="w-4 h-4 text-primary" />
-            <span className="text-sm font-semibold text-primary">10.3% APY</span>
+            <span className="text-sm font-semibold text-primary">0.0% APY</span>
           </div>
         </div>
 
@@ -52,7 +52,7 @@ export const StreamingValue = () => {
         <div className="mb-8">
           <div className="flex items-baseline gap-2">
             <span className="text-5xl font-bold text-foreground tracking-tight">
-              {showValue ? "$124,567.89" : "••••••••"}
+              {showValue ? "$0.00" : "••••••••"}
             </span>
             <span className="text-muted-foreground">◎</span>
           </div>
@@ -65,7 +65,7 @@ export const StreamingValue = () => {
               <div className="w-2 h-2 rounded-full bg-primary" />
               <span className="text-xs text-muted-foreground">Yield Sources</span>
             </div>
-            <p className="text-2xl font-bold text-foreground">14</p>
+            <p className="text-2xl font-bold text-foreground">0</p>
             <p className="text-xs text-muted-foreground">Detected now</p>
           </div>
 
@@ -75,7 +75,7 @@ export const StreamingValue = () => {
               <span className="text-xs text-muted-foreground">Yield Earned</span>
             </div>
             <p className="text-2xl font-bold text-foreground">
-              {showValue ? "$8,432.50" : "••••••"}
+              {showValue ? "$0.00" : "••••••"}
             </p>
             <p className="text-xs text-muted-foreground">This month</p>
           </div>
@@ -86,7 +86,7 @@ export const StreamingValue = () => {
               <span className="text-xs text-muted-foreground">Pending</span>
             </div>
             <p className="text-2xl font-bold text-foreground">
-              {showValue ? "$1,245.30" : "••••••"}
+              {showValue ? "$0.00" : "••••••"}
             </p>
             <p className="text-xs text-muted-foreground">To claim</p>
           </div>
@@ -94,24 +94,25 @@ export const StreamingValue = () => {
 
         {/* Action Buttons */}
         <div className="grid grid-cols-4 gap-3">
-          <Button variant="success" className="gap-2">
+          <Button variant="success" className="gap-2" disabled>
             <Play className="w-4 h-4" />
-            Spend Yield
+            Spend
           </Button>
-          <Button variant="glass" className="gap-2">
+          <Button variant="glass" className="gap-2" disabled>
             <ArrowDownToLine className="w-4 h-4" />
             Receive
           </Button>
-          <Button variant="glass" className="gap-2">
+          <Button variant="glass" className="gap-2" disabled>
             <ArrowUpFromLine className="w-4 h-4" />
             Withdraw
           </Button>
           <Button
             variant="outline"
             className="gap-2 border-primary/30 hover:border-primary hover:bg-accent"
+            disabled
           >
             <CreditCard className="w-4 h-4 text-primary" />
-            <span className="text-primary">x402 Pay</span>
+            <span className="text-primary">Pay Card (...402)</span>
           </Button>
         </div>
       </div>
