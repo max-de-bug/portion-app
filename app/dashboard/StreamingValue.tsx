@@ -30,11 +30,8 @@ export const StreamingValue = ({ walletAddress }: StreamingValueProps) => {
   const {
     data: yieldData,
     isLoading,
-    refresh,
-  } = useSolomonYield({
-    walletAddress,
-    enabled: !!walletAddress,
-  });
+    refetch,
+  } = useSolomonYield(walletAddress);
 
   // Format currency values
   const formatCurrency = (value: number) => {
@@ -47,7 +44,7 @@ export const StreamingValue = ({ walletAddress }: StreamingValueProps) => {
   };
 
   // Calculate spendable yield (yield that can be spent without touching principal)
-  const spendableYield = yieldData.claimableYield + yieldData.pendingYield;
+  const spendableYield = yieldData?.spendableYield ?? 0;
   const formattedSpendableYield = formatCurrency(spendableYield);
 
   return (
@@ -77,7 +74,7 @@ export const StreamingValue = ({ walletAddress }: StreamingValueProps) => {
               Private
             </span>
             <button
-              onClick={refresh}
+              onClick={() => refetch()}
               disabled={isLoading}
               className="p-1.5 rounded-lg hover:bg-muted transition-colors disabled:opacity-50"
               title="Refresh data"
@@ -92,7 +89,7 @@ export const StreamingValue = ({ walletAddress }: StreamingValueProps) => {
           <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-accent border border-primary/20">
             <Zap className="w-4 h-4 text-primary" />
             <span className="text-sm font-semibold text-primary">
-              {isLoading ? "..." : `${yieldData.apy.toFixed(1)}% APY`}
+              {isLoading ? "..." : `${(yieldData?.apy ?? 0).toFixed(1)}% APY`}
             </span>
           </div>
         </div>
@@ -103,15 +100,15 @@ export const StreamingValue = ({ walletAddress }: StreamingValueProps) => {
             <span className="text-5xl font-bold text-foreground tracking-tight">
               {showValue ? formattedSpendableYield : "••••••••"}
             </span>
-            {yieldData.userStaked > 0 && (
+            {(yieldData?.susdvBalance ?? 0) > 0 && (
               <span className="text-muted-foreground text-sm">
-                from {yieldData.userStaked.toFixed(2)} sUSDV
+                from {(yieldData?.susdvBalance ?? 0).toFixed(2)} sUSDV
               </span>
             )}
           </div>
-          {yieldData.lastUpdated && (
+          {yieldData?.timestamp && (
             <p className="text-xs text-muted-foreground mt-2">
-              Last updated: {yieldData.lastUpdated.toLocaleTimeString()}
+              Last updated: {new Date(yieldData.timestamp).toLocaleTimeString()}
             </p>
           )}
         </div>
@@ -126,10 +123,10 @@ export const StreamingValue = ({ walletAddress }: StreamingValueProps) => {
               </span>
             </div>
             <p className="text-2xl font-bold text-foreground">
-              {yieldData.userStaked > 0 ? "1" : "0"}
+              {(yieldData?.susdvBalance ?? 0) > 0 ? "1" : "0"}
             </p>
             <p className="text-xs text-muted-foreground">
-              {yieldData.userStaked > 0 ? "sUSDV Active" : "Detected now"}
+              {(yieldData?.susdvBalance ?? 0) > 0 ? "sUSDV Active" : "Detected now"}
             </p>
           </div>
 
@@ -141,7 +138,7 @@ export const StreamingValue = ({ walletAddress }: StreamingValueProps) => {
               </span>
             </div>
             <p className="text-2xl font-bold text-foreground">
-              {showValue ? formatCurrency(yieldData.pendingYield) : "••••••"}
+              {showValue ? formatCurrency(yieldData?.monthlyYield ?? 0) : "••••••"}
             </p>
             <p className="text-xs text-muted-foreground">This month</p>
           </div>
@@ -153,7 +150,7 @@ export const StreamingValue = ({ walletAddress }: StreamingValueProps) => {
             </div>
             <p className="text-2xl font-bold text-foreground">
               {showValue
-                ? formatCurrency(yieldData.pendingYield / 30)
+                ? formatCurrency(yieldData?.dailyYield ?? 0)
                 : "••••••"}
             </p>
             <p className="text-xs text-muted-foreground">To earn</p>
@@ -189,7 +186,7 @@ export const StreamingValue = ({ walletAddress }: StreamingValueProps) => {
           <Button
             variant="glass"
             className="gap-2"
-            disabled={yieldData.claimableYield <= 0}
+            disabled={spendableYield <= 0}
             onClick={() => setIsWithdrawOpen(true)}
             title="Withdraw earned yield as USDV"
           >

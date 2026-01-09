@@ -133,8 +133,8 @@ export async function verifyTransaction(
       return { verified: false, error: "Transaction failed or not confirmed" };
     }
 
-    // Parse transaction instructions
-    const instructions = transaction.transaction.message.instructions;
+    // Parse transaction instructions (reserved for future verification)
+    // const instructions = transaction.transaction.message.instructions;
 
     // For SOL transfers
     if (!tokenMint) {
@@ -220,8 +220,8 @@ export async function createTransferTransaction(
   const from = new PublicKey(fromWallet);
   const to = new PublicKey(toWallet);
 
-  const { blockhash, lastValidBlockHeight } =
-    await connection.getLatestBlockhash();
+  const { blockhash } = await connection.getLatestBlockhash();
+  // lastValidBlockHeight reserved for future timeout handling
 
   const transaction = new Transaction({
     recentBlockhash: blockhash,

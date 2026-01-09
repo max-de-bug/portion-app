@@ -16,6 +16,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { AgentChat } from "./AgentChat";
 import { usePrivy } from "@privy-io/react-auth";
+import { useSolomonYield } from "@/app/hooks/useSolomonYield";
 
 interface NavItem {
   icon: any;
@@ -40,6 +41,15 @@ export const Sidebar = () => {
     (account) => account.type === "wallet" && account.chainType === "solana"
   ) as { address: string } | undefined;
   const walletAddress = solanaWallet?.address || "";
+
+  // Check if address is valid Solana address (not Ethereum 0x...)
+  const isValidSolanaAddress = walletAddress && !walletAddress.startsWith("0x");
+
+  // Fetch yield data for available yield
+  const { data: yieldData } = useSolomonYield(
+    isValidSolanaAddress ? walletAddress : undefined
+  );
+  const availableYield = yieldData?.spendableYield ?? 0;
 
   return (
     <aside className="w-[220px] h-screen bg-sidebar border-r border-sidebar-border flex flex-col fixed left-0 top-0 z-50">
@@ -193,7 +203,7 @@ export const Sidebar = () => {
         isOpen={isAgentOpen}
         onClose={() => setIsAgentOpen(false)}
         walletAddress={walletAddress}
-        availableYield={0} // TODO: Connect to real yield data
+        availableYield={availableYield}
       />
     </aside>
   );

@@ -18,6 +18,7 @@ import {
   useSolanaBalance,
   formatSolBalance,
 } from "@/app/hooks/useSolanaBalance";
+import { useSolomonYield } from "@/app/hooks/useSolomonYield";
 
 export const WalletPopover = () => {
   const { user, logout } = usePrivy();
@@ -53,6 +54,13 @@ export const WalletPopover = () => {
     refetch,
     status,
   } = useSolanaBalance(isOpen ? address : undefined, network);
+
+  // Fetch yield data (USDv, sUSDv, spendable yield)
+  const {
+    data: yieldData,
+    isLoading: yieldLoading,
+    error: yieldError,
+  } = useSolomonYield(isOpen && isValidSolanaAddress ? address : undefined);
 
   const lastUpdated = dataUpdatedAt ? new Date(dataUpdatedAt) : null;
   const isRefreshing = isFetching && !solBalanceLoading;
@@ -194,7 +202,12 @@ export const WalletPopover = () => {
                         <span className="font-medium text-gray-600">USDv</span>
                       </div>
                       <span className="font-bold text-gray-900 text-lg">
-                        0.0000
+                        {yieldLoading
+                          ? "Loading…"
+                          : (yieldData?.usdvBalance ?? 0).toLocaleString("en-US", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 4,
+                            })}
                       </span>
                     </div>
 
@@ -207,12 +220,47 @@ export const WalletPopover = () => {
                             <Zap className="w-2 h-2 text-white" />
                           </div>
                         </div>
-                        <span className="font-medium text-gray-600">sUSDv</span>
+                        <div className="flex flex-col">
+                          <span className="font-medium text-gray-600">sUSDv</span>
+                          {yieldData && yieldData.susdvBalance > 0 && (
+                            <span className="text-[10px] text-emerald-600 font-semibold">
+                              Earning {yieldData.apy.toFixed(1)}% APY
+                            </span>
+                          )}
+                        </div>
                       </div>
                       <span className="font-bold text-gray-900 text-lg">
-                        0.0000
+                        {yieldLoading
+                          ? "Loading…"
+                          : (yieldData?.susdvBalance ?? 0).toLocaleString("en-US", {
+                              minimumFractionDigits: 2,
+                              maximumFractionDigits: 4,
+                            })}
                       </span>
                     </div>
+
+                    {/* Spendable Yield */}
+                    {yieldData && yieldData.spendableYield > 0 && (
+                      <div className="flex items-center justify-between pt-2 border-t border-orange-200">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 rounded-full bg-emerald-500 flex items-center justify-center text-white">
+                            <Zap className="w-4 h-4" />
+                          </div>
+                          <div className="flex flex-col">
+                            <span className="font-medium text-gray-600">Spendable Yield</span>
+                            <span className="text-[10px] text-gray-400">
+                              Available for x402 payments
+                            </span>
+                          </div>
+                        </div>
+                        <span className="font-bold text-emerald-600 text-lg">
+                          ${(yieldData.spendableYield ?? 0).toLocaleString("en-US", {
+                            minimumFractionDigits: 2,
+                            maximumFractionDigits: 2,
+                          })}
+                        </span>
+                      </div>
+                    )}
 
                     {/* SOL (Solana) - REAL TIME */}
                     <div className="flex items-center justify-between">
@@ -230,15 +278,24 @@ export const WalletPopover = () => {
                         </div>
                       </div>
                       <div className="flex items-center gap-2">
-                        <span
-                          className={`font-bold text-gray-900 text-lg ${
-                            isRefreshing ? "opacity-50" : ""
-                          }`}
-                        >
-                          {solBalanceLoading
-                            ? "Loading…"
-                            : formatSolBalance(solBalance)}
-                        </span>
+                        <div className="flex flex-col items-end">
+                          <span
+                            className={`font-bold text-gray-900 text-lg ${
+                              isRefreshing ? "opacity-50" : ""
+                            }`}
+                          >
+                            {solBalanceLoading
+                              ? "Loading…"
+                              : fetchError
+                              ? "Error"
+                              : formatSolBalance(solBalance)}
+                          </span>
+                          {fetchError && (
+                            <span className="text-[10px] text-red-500">
+                              Check console
+                            </span>
+                          )}
+                        </div>
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
@@ -299,18 +356,37 @@ export const WalletPopover = () => {
                       <code className="text-gray-900 text-[10px]">
                         {solBalance !== undefined ? `${solBalance} SOL` : "—"}
                       </code>
+                      {yieldData?.timestamp && (
+                        <>
+                          <span className="font-semibold">Yield Updated:</span>
+                          <code className="text-gray-900 text-[10px]">
+                            {new Date(yieldData.timestamp).toLocaleTimeString()}
+                          </code>
+                        </>
+                      )}
+                      {lastUpdated && (
+                        <>
+                          <span className="font-semibold">SOL Updated:</span>
+                          <code className="text-gray-900 text-[10px]">
+                            {lastUpdated.toLocaleTimeString()}
+                          </code>
+                        </>
+                      )}
                     </div>
-                    {lastUpdated && (
-                      <p className="mt-2 text-green-700 text-[10px]">
-                        Updated: {lastUpdated.toLocaleTimeString()}
-                      </p>
-                    )}
                     {fetchError && (
                       <p className="mt-2 text-red-700 text-[10px]">
-                        Error:{" "}
+                        SOL Error:{" "}
                         {fetchError instanceof Error
                           ? fetchError.message
                           : String(fetchError)}
+                      </p>
+                    )}
+                    {yieldError && (
+                      <p className="mt-2 text-red-700 text-[10px]">
+                        Yield Error:{" "}
+                        {yieldError instanceof Error
+                          ? yieldError.message
+                          : String(yieldError)}
                       </p>
                     )}
                   </div>

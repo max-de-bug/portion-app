@@ -9,7 +9,8 @@ import { usePrivy } from "@privy-io/react-auth";
 
 export default function Dashboard() {
   const { user } = usePrivy();
-  const { apy, isLoading: apyLoading } = useSolomonAPY(!!user);
+  const { data: apyData, isLoading: apyLoading } = useSolomonAPY();
+  const apy = apyData?.apy ?? 0;
 
   // Find specifically the Solana wallet address from linked accounts
   const solanaWallet = user?.linkedAccounts?.find(

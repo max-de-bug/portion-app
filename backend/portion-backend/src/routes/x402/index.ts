@@ -1,5 +1,5 @@
 import { FastifyPluginAsync } from "fastify";
-import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { PublicKey } from "@solana/web3.js";
 
 /**
  * x402 Payment Protocol Routes
@@ -14,12 +14,12 @@ import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
  * 4. Principal (sUSDV) stays protected
  */
 
-// Environment configuration
-const SOLANA_RPC = {
-  mainnet:
-    process.env.SOLANA_RPC_MAINNET || "https://api.mainnet-beta.solana.com",
-  devnet: process.env.SOLANA_RPC_DEVNET || "https://api.devnet.solana.com",
-};
+// Environment configuration (reserved for future use)
+// const SOLANA_RPC = {
+//   mainnet:
+//     process.env.SOLANA_RPC_MAINNET || "https://api.mainnet-beta.solana.com",
+//   devnet: process.env.SOLANA_RPC_DEVNET || "https://api.devnet.solana.com",
+// };
 
 const NETWORK = (process.env.SOLANA_NETWORK || "devnet") as
   | "mainnet"
@@ -40,15 +40,15 @@ interface PaymentRequirements {
   outputSchema?: object;
 }
 
-// x402 Payment Payload (per spec)
-interface PaymentPayload {
-  x402Version: 1;
-  scheme: "exact";
-  network: string;
-  payload: {
-    signature: string;
-  };
-}
+// x402 Payment Payload (per spec) - Reserved for future use
+// interface PaymentPayload {
+//   x402Version: 1;
+//   scheme: "exact";
+//   network: string;
+//   payload: {
+//     signature: string;
+//   };
+// }
 
 // Service pricing (in USD)
 const SERVICE_PRICING: Record<string, { price: number; description: string }> =
@@ -110,7 +110,7 @@ const x402Plugin: FastifyPluginAsync = async (fastify): Promise<void> => {
       inputData?: string;
     };
   }>("/prepare", async (request, reply) => {
-    const { service, walletAddress, inputData } = request.body;
+    const { service, walletAddress } = request.body;
 
     const serviceInfo = SERVICE_PRICING[service];
     if (!serviceInfo) {
@@ -198,8 +198,10 @@ const x402Plugin: FastifyPluginAsync = async (fastify): Promise<void> => {
     };
   }>("/execute/:service", async (request, reply) => {
     const { service } = request.params;
-    const { input, paymentId, walletAddress } = request.body;
-    const paymentHeader = request.headers["x-payment"];
+    const { input, paymentId } = request.body;
+    // paymentHeader and walletAddress reserved for future payment verification
+    // const paymentHeader = request.headers["x-payment"];
+    // const { walletAddress } = request.body;
 
     const serviceInfo = SERVICE_PRICING[service];
     if (!serviceInfo) {
@@ -338,9 +340,8 @@ async function getSpendableYield(
 
   // Production: query actual sUSDV balance and calculate appreciation
   try {
-    const connection = new Connection(SOLANA_RPC[NETWORK], "confirmed");
-
     // TODO: Implement actual sUSDV yield calculation
+    // const connection = new Connection(SOLANA_RPC[NETWORK], "confirmed");
     // 1. Get sUSDV balance from Solomon Labs token account
     // 2. Get current exchange rate from Solomon Labs contract
     // 3. Calculate: yield = (sUSDV * exchangeRate) - principal

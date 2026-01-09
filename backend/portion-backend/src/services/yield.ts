@@ -173,7 +173,7 @@ export function cleanupExpiredAllocations(): number {
   let cleaned = 0;
   const now = new Date();
 
-  for (const [id, allocation] of allocations.entries()) {
+  for (const [, allocation] of allocations.entries()) {
     if (allocation.expiresAt < now && allocation.status === "pending") {
       allocation.status = "returned";
       cleaned++;
@@ -194,7 +194,7 @@ export async function fetchCurrentAPY(): Promise<number> {
     });
 
     if (response.ok) {
-      const data = await response.json();
+      const data = (await response.json()) as { apy?: number };
       return data.apy || CURRENT_APY;
     }
 
