@@ -1,5 +1,6 @@
 import { join } from 'node:path'
 import AutoLoad, { AutoloadPluginOptions } from '@fastify/autoload'
+import cors from '@fastify/cors'
 import { FastifyPluginAsync, FastifyServerOptions } from 'fastify'
 
 export interface AppOptions extends FastifyServerOptions, Partial<AutoloadPluginOptions> {
@@ -13,9 +14,17 @@ const app: FastifyPluginAsync<AppOptions> = async (
   fastify,
   opts
 ): Promise<void> => {
-  // Place here your custom code!
-
-  // Do not touch the following lines
+  // Enable CORS for frontend requests
+  await fastify.register(cors, {
+    origin: [
+      'http://localhost:3000',
+      'http://localhost:3001',
+      process.env.FRONTEND_URL || 'http://localhost:3000',
+    ],
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization', 'X-Payment'],
+    credentials: true,
+  })
 
   // This loads all plugins defined in plugins
   // those should be support plugins that are reused

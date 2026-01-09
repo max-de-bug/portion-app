@@ -1,7 +1,7 @@
 {
   "name": "portion-backend",
   "version": "1.0.0",
-  "description": "This project was bootstrapped with Fastify-CLI.",
+  "description": "Portion x402 Payment Backend - Yield-based micropayments for AI agents",
   "main": "app.ts",
   "directories": {
     "test": "test"
@@ -14,7 +14,13 @@
     "dev": "npm run build:ts && concurrently -k -p \"[{name}]\" -n \"TypeScript,App\" -c \"yellow.bold,cyan.bold\" \"npm:watch:ts\" \"npm:dev:start\"",
     "dev:start": "fastify start --ignore-watch=.ts$ -w -l info -P dist/app.js"
   },
-  "keywords": [],
+  "keywords": [
+    "x402",
+    "micropayments",
+    "solana",
+    "yield",
+    "ai-agents"
+  ],
   "author": "",
   "license": "ISC",
   "dependencies": {
@@ -22,7 +28,11 @@
     "fastify-plugin": "^5.0.0",
     "@fastify/autoload": "^6.0.0",
     "@fastify/sensible": "^6.0.0",
-    "fastify-cli": "^7.4.1"
+    "@fastify/cors": "^10.0.0",
+    "fastify-cli": "^7.4.1",
+    "@solana/web3.js": "^1.98.0",
+    "@x402/core": "^0.1.0",
+    "@x402/svm": "^0.1.0"
   },
   "devDependencies": {
     "@types/node": "^24.0.8",

@@ -1,19 +1,33 @@
+"use client";
+
 import { StatCard } from "./StatCard";
 import { StreamingValue } from "./StreamingValue";
 import { ActiveStreams } from "./ActiveStreams";
 import { Zap, DollarSign, Activity } from "lucide-react";
+import { useSolomonAPY } from "@/app/hooks/useSolomonYield";
+import { usePrivy } from "@privy-io/react-auth";
 
 export default function Dashboard() {
+  const { user } = usePrivy();
+  const { apy, isLoading: apyLoading } = useSolomonAPY(!!user);
+
+  // Find specifically the Solana wallet address from linked accounts
+  const solanaWallet = user?.linkedAccounts?.find(
+    (account) => account.type === "wallet" && account.chainType === "solana"
+  ) as { address: string } | undefined;
+
+  const walletAddress = solanaWallet?.address || user?.wallet?.address || "";
+
   return (
     <main className="p-6">
       {/* Stats Row */}
       <div className="grid grid-cols-3 gap-4 mb-6">
         <StatCard
           icon={Zap}
-          value="0.0%"
+          value={apyLoading ? "..." : `${apy.toFixed(1)}%`}
           label="Spendable APY"
-          trend="0.0%"
-          trendUp={true}
+          trend={`${apy > 0 ? "+" : ""}${apy.toFixed(1)}%`}
+          trendUp={apy > 0}
         />
         <StatCard
           icon={DollarSign}
@@ -34,7 +48,7 @@ export default function Dashboard() {
       <div className="grid grid-cols-3 gap-6 mb-6">
         {/* Spendable Value - Takes 2 columns */}
         <div className="col-span-2">
-          <StreamingValue />
+          <StreamingValue walletAddress={walletAddress} />
         </div>
 
         {/* Active Streams */}

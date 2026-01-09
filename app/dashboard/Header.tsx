@@ -14,7 +14,10 @@ const NetworkSwitcher = () => {
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+      if (
+        dropdownRef.current &&
+        !dropdownRef.current.contains(event.target as Node)
+      ) {
         setIsOpen(false);
       }
     };
@@ -30,14 +33,24 @@ const NetworkSwitcher = () => {
       <button
         onClick={() => setIsOpen(!isOpen)}
         className={`hidden md:flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all duration-200 ${
-          isMainnet 
-            ? "bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100" 
+          isMainnet
+            ? "bg-emerald-50 text-emerald-700 border-emerald-100 hover:bg-emerald-100"
             : "bg-amber-50 text-amber-700 border-amber-100 hover:bg-amber-100"
         }`}
       >
-        <div className={`w-2 h-2 rounded-full animate-pulse ${isMainnet ? "bg-emerald-500" : "bg-amber-500"}`} />
-        <span className="text-xs font-bold w-24 text-left">{isMainnet ? "Solana Mainnet" : "Solana Devnet"}</span>
-        <ChevronDown className={`w-3 h-3 transition-transform duration-200 ${isOpen ? "rotate-180" : ""}`} />
+        <div
+          className={`w-2 h-2 rounded-full animate-pulse ${
+            isMainnet ? "bg-emerald-500" : "bg-amber-500"
+          }`}
+        />
+        <span className="text-xs font-bold w-24 text-left">
+          {isMainnet ? "Solana Mainnet" : "Solana Devnet"}
+        </span>
+        <ChevronDown
+          className={`w-3 h-3 transition-transform duration-200 ${
+            isOpen ? "rotate-180" : ""
+          }`}
+        />
       </button>
 
       {isOpen && (
@@ -49,7 +62,9 @@ const NetworkSwitcher = () => {
                 setIsOpen(false);
               }}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                isMainnet ? "bg-emerald-50 text-emerald-700" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                isMainnet
+                  ? "bg-emerald-50 text-emerald-700"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
             >
               <div className="flex items-center gap-2">
@@ -64,7 +79,9 @@ const NetworkSwitcher = () => {
                 setIsOpen(false);
               }}
               className={`w-full flex items-center justify-between px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
-                !isMainnet ? "bg-amber-50 text-amber-700" : "text-muted-foreground hover:bg-muted hover:text-foreground"
+                !isMainnet
+                  ? "bg-amber-50 text-amber-700"
+                  : "text-muted-foreground hover:bg-muted hover:text-foreground"
               }`}
             >
               <div className="flex items-center gap-2">
@@ -81,7 +98,7 @@ const NetworkSwitcher = () => {
 };
 
 export const Header = () => {
-  const { login, authenticated, user, logout } = usePrivy();
+  const { login, authenticated } = usePrivy();
 
   return (
     <header className="h-16 border-b border-border bg-background px-6 flex items-center justify-between sticky top-0 z-40">
@@ -111,11 +128,12 @@ export const Header = () => {
 
         {/* Authentication State */}
         {authenticated ? (
-          <WalletPopover 
-            onDisconnect={logout} 
-          />
+          <WalletPopover />
         ) : (
-          <Button onClick={login} className="gap-2 font-semibold bg-emerald-600 hover:bg-emerald-500 text-white">
+          <Button
+            onClick={login}
+            className="gap-2 font-semibold bg-emerald-600 hover:bg-emerald-500 text-white"
+          >
             <Wallet className="w-4 h-4" />
             Connect Wallet
           </Button>
