@@ -182,12 +182,27 @@ export function HeroAnimation() {
 
   if (!mounted) return <div className="absolute inset-0 bg-[#0A0F1E]" />;
 
+  // Calculate capped DPR for performance
+  const cappedDpr = typeof window !== "undefined" 
+    ? Math.min(window.devicePixelRatio, 1.5) 
+    : 1;
+
   return (
     <div className="absolute inset-0 bg-[#0A0F1E]">
       <Canvas
         camera={{ position: [0, 0, 15], fov: 50 }}
-        dpr={[1, 2]}
-        gl={{ antialias: true, alpha: true }}
+        dpr={cappedDpr}
+        gl={{ 
+          antialias: true, 
+          alpha: true,
+          powerPreference: "high-performance",
+          stencil: false,
+          depth: true,
+        }}
+        // Render on demand when animations update (controlled by useFrame)
+        frameloop="always"
+        // Performance optimizations
+        performance={{ min: 0.5 }}
       >
          <color attach="background" args={["#0A0F1E"]} />
          <Scene />

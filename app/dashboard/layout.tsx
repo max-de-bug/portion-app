@@ -1,5 +1,6 @@
 import { Sidebar } from "./Sidebar";
 import { Header } from "./Header";
+import { ErrorBoundary } from "../components/ErrorBoundary";
 
 export default function DashboardLayout({
   children,
@@ -7,18 +8,22 @@ export default function DashboardLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="min-h-screen bg-background">
-      {/* Sidebar */}
-      <Sidebar />
+    <ErrorBoundary>
+      <div className="min-h-screen bg-background">
+        {/* Sidebar */}
+        <Sidebar />
 
-      {/* Main Content */}
-      <div className="ml-[220px]">
-        {/* Header */}
-        <Header />
+        {/* Main Content */}
+        <div className="ml-[220px]">
+          {/* Header */}
+          <Header />
 
-        {/* Dashboard Content */}
-        {children}
+          {/* Dashboard Content */}
+          <ErrorBoundary>
+            {children}
+          </ErrorBoundary>
+        </div>
       </div>
-    </div>
+    </ErrorBoundary>
   );
 }

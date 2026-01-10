@@ -1,23 +1,24 @@
 "use client";
 
-import React, { useState, useEffect, useRef } from "react";
+import React, { useState, useEffect, useRef, useCallback, memo } from "react";
 import { motion, AnimatePresence, useMotionValue, useSpring } from "framer-motion";
-import { Zap, Shield, Wallet, CreditCard, Cpu, Globe, Database, Cloud, Bot, Server } from "lucide-react";
+import { Bot, Cloud, Server } from "lucide-react";
+import { useReducedMotion } from "@/hooks/useReducedMotion";
 
 // Service nodes with generic icons instead of brand names
 const MERCHANT_NODES = [
   { id: "ai", icon: Bot, hint: "AI Services", x: 88, y: 20 },
   { id: "cloud", icon: Cloud, hint: "Cloud Infra", x: 92, y: 35 },
   { id: "data", icon: Server, hint: "Data Services", x: 88, y: 50 },
-];
+] as const;
 
 const PRINCIPAL_NODES = [
   { id: "p1", x: 8, y: 20 },
   { id: "p2", x: 12, y: 35 },
   { id: "p3", x: 8, y: 50 },
-];
+] as const;
 
-// Lightning bolt path generator
+// Lightning bolt path generator - memoized outside component
 const generateLightningPath = (startX: number, startY: number, endX: number, endY: number) => {
   const midX = (startX + endX) / 2;
   const midY = (startY + endY) / 2;
@@ -26,14 +27,18 @@ const generateLightningPath = (startX: number, startY: number, endX: number, end
   return `M ${startX} ${startY} L ${midX + offset1} ${midY + offset2} L ${endX} ${endY}`;
 };
 
-export const InteractiveHero = () => {
+export const InteractiveHero = memo(function InteractiveHero() {
   const [isDetected, setIsDetected] = useState(false);
   const [activeMerchant, setActiveMerchant] = useState<string | null>(null);
   const [lightningPhase, setLightningPhase] = useState(0); // 0: none, 1: incoming, 2: outgoing
   const [lightningPaths, setLightningPaths] = useState<{incoming: string[], outgoing: string[]}>({ incoming: [], outgoing: [] });
   const containerRef = useRef<HTMLDivElement>(null);
+  const rafId = useRef<number | null>(null);
+  
+  // Performance: Check reduced motion preference
+  const prefersReducedMotion = useReducedMotion();
 
-  // Custom Cursor Logic
+  // Custom Cursor Logic with springs
   const mouseX = useMotionValue(0);
   const mouseY = useMotionValue(0);
   
@@ -41,8 +46,11 @@ export const InteractiveHero = () => {
   const cursorX = useSpring(mouseX, springConfig);
   const cursorY = useSpring(mouseY, springConfig);
 
-  // Lightning animation sequence
+  // Lightning animation sequence with cleanup
   useEffect(() => {
+    // Skip animations if user prefers reduced motion
+    if (prefersReducedMotion) return;
+
     const triggerLightning = () => {
       // Generate new lightning paths
       const incoming = PRINCIPAL_NODES.map(node => 
@@ -57,14 +65,19 @@ export const InteractiveHero = () => {
       setLightningPhase(1);
       
       // Phase 2: Lightning from center to service circles
-      setTimeout(() => {
+      const phase2Timeout = setTimeout(() => {
         setLightningPhase(2);
       }, 600);
       
       // Reset
-      setTimeout(() => {
+      const resetTimeout = setTimeout(() => {
         setLightningPhase(0);
       }, 1400);
+
+      return () => {
+        clearTimeout(phase2Timeout);
+        clearTimeout(resetTimeout);
+      };
     };
 
     // Initial trigger
@@ -77,19 +90,37 @@ export const InteractiveHero = () => {
       clearTimeout(initialTimeout);
       clearInterval(interval);
     };
-  }, []);
+  }, [prefersReducedMotion]);
 
-  useEffect(() => {
-    const handleMouseMove = (e: MouseEvent) => {
+  // Optimized mouse tracking with RAF throttling and passive listener
+  const handleMouseMove = useCallback((e: MouseEvent) => {
+    // Cancel previous RAF if pending
+    if (rafId.current !== null) {
+      cancelAnimationFrame(rafId.current);
+    }
+
+    rafId.current = requestAnimationFrame(() => {
       if (containerRef.current) {
         const rect = containerRef.current.getBoundingClientRect();
         mouseX.set(e.clientX - rect.left);
         mouseY.set(e.clientY - rect.top);
       }
-    };
-    window.addEventListener("mousemove", handleMouseMove);
-    return () => window.removeEventListener("mousemove", handleMouseMove);
+      rafId.current = null;
+    });
   }, [mouseX, mouseY]);
+
+  useEffect(() => {
+    // Use passive listener for better scroll performance
+    window.addEventListener("mousemove", handleMouseMove, { passive: true });
+    
+    return () => {
+      window.removeEventListener("mousemove", handleMouseMove);
+      // Cleanup any pending RAF
+      if (rafId.current !== null) {
+        cancelAnimationFrame(rafId.current);
+      }
+    };
+  }, [handleMouseMove]);
 
   return (
     <div 
@@ -451,4 +482,5 @@ export const InteractiveHero = () => {
       <div className="absolute top-0 left-0 right-0 h-40 bg-gradient-to-b from-[#f0fdf4] to-transparent pointer-events-none" />
     </div>
   );
-};
+});
+

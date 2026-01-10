@@ -3,6 +3,10 @@
 import { StatCard } from "./StatCard";
 import { StreamingValue } from "./StreamingValue";
 import { ActiveStreams } from "./ActiveStreams";
+import { SpendingPolicies } from "./_features/spending-policies";
+import { TransactionActivity } from "./TransactionActivity";
+import { YieldCapacity } from "./YieldCapacity";
+import { AuditTrail } from "./AuditTrail";
 import { Zap, DollarSign, Activity } from "lucide-react";
 import { useSolomonAPY } from "@/app/hooks/useSolomonYield";
 import { usePrivy } from "@privy-io/react-auth";
@@ -20,9 +24,9 @@ export default function Dashboard() {
   const walletAddress = solanaWallet?.address || user?.wallet?.address || "";
 
   return (
-    <main className="p-6">
+    <main className="p-6 space-y-6">
       {/* Stats Row */}
-      <div className="grid grid-cols-3 gap-4 mb-6">
+      <div className="grid grid-cols-3 gap-4">
         <StatCard
           icon={Zap}
           value={apyLoading ? "..." : `${apy.toFixed(1)}%`}
@@ -46,16 +50,34 @@ export default function Dashboard() {
       </div>
 
       {/* Main Content Grid */}
-      <div className="grid grid-cols-3 gap-6 mb-6">
+      <div className="grid grid-cols-3 gap-6">
         {/* Spendable Value - Takes 2 columns */}
         <div className="col-span-2">
           <StreamingValue walletAddress={walletAddress} />
         </div>
 
-        {/* Active Streams */}
+        {/* Yield Capacity */}
         <div className="col-span-1">
-          <ActiveStreams />
+          <YieldCapacity walletAddress={walletAddress} />
         </div>
+      </div>
+
+      {/* Spending Management Row */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* Spending Policies */}
+        <SpendingPolicies />
+
+        {/* Transaction Activity */}
+        <TransactionActivity />
+      </div>
+
+      {/* Activity & Compliance Row */}
+      <div className="grid grid-cols-2 gap-6">
+        {/* Active Streams */}
+        <ActiveStreams />
+
+        {/* Audit Trail */}
+        <AuditTrail />
       </div>
     </main>
   );
