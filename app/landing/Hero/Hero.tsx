@@ -10,13 +10,13 @@ const InteractiveHero = dynamic(
 );
 
 export const Hero = () => (
-  <section className="relative h-[95vh] flex flex-col items-center justify-start overflow-hidden bg-[#f0fdf4]">
+  <section className="relative min-h-screen flex flex-col items-center justify-start overflow-hidden bg-[#f0fdf4]">
     {/* Text Layer - Positioned Higher */}
     <motion.div 
       initial={{ opacity: 0, y: 20 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.8 }}
-      className="max-w-3xl mx-auto text-center relative z-20 pt-32 pointer-events-none"
+      className="max-w-3xl mx-auto text-center relative z-20 pt-32 px-4 pointer-events-none"
     >
       <h1 className="text-3xl md:text-5xl font-black text-[#022c22] leading-tight mb-4 tracking-tighter">
         Spend Yield.<br />
@@ -35,9 +35,11 @@ export const Hero = () => (
       </div>
     </motion.div>
 
-    {/* Interactive SVG Layer - Positioned Lower to separate from text */}
-    <div className="absolute inset-x-0 bottom-0 h-[65vh] z-10">
+    {/* Interactive SVG Layer - Positioned Below Action */}
+    <div className="relative w-full h-[60vh] z-10">
       <InteractiveHero />
     </div>
+
   </section>
+
 );

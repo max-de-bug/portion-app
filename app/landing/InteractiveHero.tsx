@@ -125,7 +125,7 @@ export const InteractiveHero = memo(function InteractiveHero() {
   return (
     <div 
       ref={containerRef}
-      className="absolute inset-0 w-full h-full overflow-hidden bg-[#f0fdf4] flex items-center justify-center transition-colors duration-1000"
+      className="absolute inset-0 w-full h-full overflow-hidden flex items-center justify-center transition-colors duration-1000"
     >
       {/* Background Grid - Soft Emerald */}
       <div 
@@ -136,8 +136,9 @@ export const InteractiveHero = memo(function InteractiveHero() {
         }} 
       />
 
-      {/* Radial Background Glow - Enhanced */}
-      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_40%,rgba(16,185,129,0.15),transparent_60%)]" />
+      {/* Radial Background Glow - Centered in relative container */}
+      <div className="absolute inset-0 bg-[radial-gradient(circle_at_50%_50%,rgba(16,185,129,0.15),transparent_60%)]" />
+
 
       {/* Custom Cursor Glow - More dynamic */}
       <motion.div

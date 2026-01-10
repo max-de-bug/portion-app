@@ -1,9 +1,13 @@
 "use client";
 
 import { PrivyProvider } from "@privy-io/react-auth";
+import { toSolanaWalletConnectors } from "@privy-io/react-auth/solana";
 import { NetworkProvider } from "./context/NetworkContext";
 import { QueryProvider } from "./QueryProvider";
 import { useState, useEffect } from "react";
+
+// Create Solana wallet connectors for external wallets (Phantom, Solflare, Backpack, etc.)
+const solanaConnectors = toSolanaWalletConnectors();
 
 // Loading component while Privy initializes
 function LoadingScreen() {
@@ -44,6 +48,8 @@ export default function Providers({ children }: { children: React.ReactNode }) {
               theme: "light",
               accentColor: "#10b981", // Emerald-500
               logo: "/portion-privy-logo.svg",
+              // Specify chain type for Solana-focused app
+              walletChainType: "solana-only",
               walletList: [
                 "phantom",
                 "solflare",
@@ -57,6 +63,12 @@ export default function Providers({ children }: { children: React.ReactNode }) {
             embeddedWallets: {
               solana: {
                 createOnLogin: "users-without-wallets",
+              },
+            },
+            // External wallet connectors for Solana (required for Solflare, etc.)
+            externalWallets: {
+              solana: {
+                connectors: solanaConnectors,
               },
             },
           }}
