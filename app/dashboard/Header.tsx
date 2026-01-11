@@ -98,7 +98,30 @@ const NetworkSwitcher = () => {
 };
 
 export const Header = () => {
-  const { login, authenticated } = usePrivy();
+  const { login, authenticated, ready } = usePrivy();
+
+  const handleLogin = async () => {
+    if (!ready) {
+      console.warn("[Header] Privy not ready, waiting...");
+      return;
+    }
+
+    try {
+      console.log("[Header] Initiating wallet login...");
+      await login();
+      console.log("[Header] Login successful");
+    } catch (error) {
+      console.error("[Header] Login error:", error);
+      // Privy will show its own error UI, but log for debugging
+      if (error instanceof Error) {
+        console.error("[Header] Error details:", {
+          message: error.message,
+          name: error.name,
+          stack: error.stack,
+        });
+      }
+    }
+  };
 
   return (
     <header className="h-16 border-b border-border bg-background px-6 flex items-center justify-between sticky top-0 z-40">
@@ -131,11 +154,13 @@ export const Header = () => {
           <WalletPopover />
         ) : (
           <Button
-            onClick={login}
-            className="gap-2 font-semibold bg-emerald-600 hover:bg-emerald-500 text-white"
+            onClick={handleLogin}
+            disabled={!ready}
+            className="gap-2 font-semibold bg-emerald-600 hover:bg-emerald-500 text-white disabled:opacity-50 disabled:cursor-not-allowed"
+            aria-label="Connect wallet"
           >
             <Wallet className="w-4 h-4" />
-            Connect Wallet
+            {ready ? "Connect Wallet" : "Loading..."}
           </Button>
         )}
       </div>

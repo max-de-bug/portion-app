@@ -4,26 +4,8 @@ import { PrivyProvider } from "@privy-io/react-auth";
 import { toSolanaWalletConnectors } from "@privy-io/react-auth/solana";
 import { NetworkProvider } from "./context/NetworkContext";
 import { QueryProvider } from "./QueryProvider";
-import { useState, useEffect } from "react";
-
-// Create Solana wallet connectors for external wallets (Phantom, Solflare, Backpack, etc.)
-const solanaConnectors = toSolanaWalletConnectors();
-
-// Loading component while Privy initializes
-function LoadingScreen() {
-  return (
-    <div className="min-h-screen flex items-center justify-center bg-[#fdfbf7]">
-      <div className="text-center">
-        <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-[#022c22] to-[#065f46] flex items-center justify-center shadow-md mx-auto mb-4">
-          <span className="font-serif text-2xl font-bold text-emerald-50 italic leading-none pt-0.5 pr-0.5">
-            P
-          </span>
-        </div>
-        <p className="text-sm text-gray-500">Loading Portion...</p>
-      </div>
-    </div>
-  );
-}
+import { useState, useEffect, useMemo } from "react";
+import LoadingScreen from "./components/LoadingScreen";
 
 export default function Providers({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
@@ -32,6 +14,23 @@ export default function Providers({ children }: { children: React.ReactNode }) {
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  // Create Solana wallet connectors for external wallets (Phantom, Solflare, Backpack, etc.)
+  // Initialize connectors only on client-side after mount to avoid SSR issues
+  const solanaConnectors = useMemo(() => {
+    if (typeof window === "undefined" || !mounted) {
+      return undefined; // Return undefined instead of empty array when not ready
+    }
+    try {
+      // Create connectors with proper configuration for Solflare compatibility
+      return toSolanaWalletConnectors({
+        shouldAutoConnect: false, // Disable auto-connect to prevent conflicts
+      });
+    } catch (error) {
+      console.error("[Providers] Error creating Solana connectors:", error);
+      return undefined;
+    }
+  }, [mounted]);
 
   // Show loading on server and during initial client mount
   if (!mounted) {
@@ -48,16 +47,16 @@ export default function Providers({ children }: { children: React.ReactNode }) {
               theme: "light",
               accentColor: "#10b981", // Emerald-500
               logo: "/portion-privy-logo.svg",
-              // Specify chain type for Solana-focused app
               walletChainType: "solana-only",
+              // Order matters - list Solflare first for better visibility and compatibility
               walletList: [
+                "solflare", // List Solflare first for better visibility
                 "phantom",
-                "solflare",
                 "backpack",
-                "detected_solana_wallets",
+                "detected_solana_wallets", // This should come last
               ],
             },
-            // Login methods
+            // Login methods - wallet should be first for better UX
             loginMethods: ["wallet", "email", "sms"],
             // Embedded wallets - creates Solana wallet for email/sms users
             embeddedWallets: {
@@ -65,7 +64,7 @@ export default function Providers({ children }: { children: React.ReactNode }) {
                 createOnLogin: "users-without-wallets",
               },
             },
-            // External wallet connectors for Solana (required for Solflare, etc.)
+            // External wallet connectors for Solana (required for Solflare, Phantom, etc.)
             externalWallets: {
               solana: {
                 connectors: solanaConnectors,
