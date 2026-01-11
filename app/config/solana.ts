@@ -17,14 +17,15 @@ export type SolanaNetwork = typeof SOLANA_NETWORKS[keyof typeof SOLANA_NETWORKS]
 
 export const SOLANA_RPC_CONFIG = {
   [SOLANA_NETWORKS.MAINNET]: [
-    process.env.NEXT_PUBLIC_SOLANA_RPC_URL,
-    "https://api.mainnet-beta.solana.com", // Official public fallback
+    process.env.NEXT_PUBLIC_SOLANA_MAINNET_RPC_URL, // Specific mainnet var
+    process.env.NEXT_PUBLIC_SOLANA_RPC_URL,         // Generic fallback
+    "https://api.mainnet-beta.solana.com",
     "https://solana-mainnet.rpc.extrnode.com",
     "https://rpc.ankr.com/solana",
   ].filter(Boolean) as string[],
   
   [SOLANA_NETWORKS.DEVNET]: [
-    process.env.NEXT_PUBLIC_SOLANA_DEVNET_RPC_URL,
+    process.env.NEXT_PUBLIC_SOLANA_DEVNET_RPC_URL, // Specific devnet var
     "https://api.devnet.solana.com",
     "https://rpc.ankr.com/solana_devnet",
   ].filter(Boolean) as string[],

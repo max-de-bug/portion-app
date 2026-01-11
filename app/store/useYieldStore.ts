@@ -3,10 +3,14 @@ import { create } from "zustand";
 interface YieldState {
   spendableYield: number;
   isInitialLoad: boolean;
+  hasSubscription: boolean;
+  dailySpent: number;
   
   // Actions
   setYield: (amount: number) => void;
   deductYield: (amount: number) => void;
+  recordSpending: (amount: number) => void;
+  toggleSubscription: (enabled: boolean) => void;
   reset: () => void;
 }
 
@@ -17,6 +21,9 @@ interface YieldState {
 export const useYieldStore = create<YieldState>((set) => ({
   spendableYield: 0,
   isInitialLoad: true,
+  hasSubscription: false,
+
+  dailySpent: 0,
 
   setYield: (amount: number) => 
     set(() => ({ 
@@ -29,9 +36,21 @@ export const useYieldStore = create<YieldState>((set) => ({
       spendableYield: Math.max(0, state.spendableYield - amount) 
     })),
 
+  recordSpending: (amount: number) =>
+    set((state) => ({
+      dailySpent: state.dailySpent + amount,
+    })),
+
+  toggleSubscription: (enabled: boolean) =>
+    set(() => ({
+      hasSubscription: enabled,
+    })),
+
   reset: () => 
     set(() => ({ 
       spendableYield: 0, 
-      isInitialLoad: true 
+      dailySpent: 0,
+      isInitialLoad: true,
+      hasSubscription: false,
     })),
 }));

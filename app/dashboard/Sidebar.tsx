@@ -72,29 +72,22 @@ export const Sidebar = () => {
         </div>
       </div>
 
-      {/* Privacy Mode Toggle */}
-      <div className="p-4">
-        <button
-          onClick={() => setPrivacyMode(!privacyMode)}
-          className="w-full flex items-center justify-between p-3 rounded-xl bg-accent border border-primary/20 hover:bg-accent/80 transition-all group"
-        >
+      {/* Privacy Mode Toggle - DISABLED as requested */}
+      <div className="p-4 opacity-50 cursor-not-allowed">
+        <div className="w-full flex items-center justify-between p-3 rounded-xl bg-accent border border-primary/20">
           <div className="flex items-center gap-2">
-            <Shield className="w-4 h-4 text-primary" />
+            <Shield className="w-4 h-4 text-muted-foreground" />
             <div className="text-left">
-              <p className="text-xs font-medium text-foreground">
+              <p className="text-xs font-medium text-muted-foreground">
                 Privacy Mode
               </p>
               <p className="text-[10px] text-muted-foreground">
-                {privacyMode ? "Active" : "Inactive"}
+                Locked for Beta
               </p>
             </div>
           </div>
-          <div
-            className={`w-2 h-2 rounded-full ${
-              privacyMode ? "bg-primary animate-pulse" : "bg-muted-foreground"
-            }`}
-          />
-        </button>
+          <div className="w-2 h-2 rounded-full bg-zinc-600" />
+        </div>
       </div>
 
       {/* Navigation */}

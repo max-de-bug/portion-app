@@ -57,7 +57,11 @@ async function fetchSolBalance(
 
   const errorMessage = `All ${network} RPC endpoints failed:\n${errors.join(
     "\n"
-  )}`;
+  )}\n\n${
+    network === SOLANA_NETWORKS.MAINNET
+      ? "Tip: Use a private RPC URL (like Helius or QuickNode) via NEXT_PUBLIC_SOLANA_MAINNET_RPC_URL to avoid 403 Forbidden errors on mainnet."
+      : ""
+  }`;
   console.error(`[useSolanaBalance] ${errorMessage}`);
   throw new Error(errorMessage);
 }

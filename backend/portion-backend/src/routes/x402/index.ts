@@ -1,5 +1,7 @@
 import { FastifyPluginAsync } from "fastify";
 import { PublicKey } from "@solana/web3.js";
+import { getSpendableYield } from "../../services/yield";
+import { executeAIService } from "../../services/ai";
 
 /**
  * x402 Payment Protocol Routes
@@ -51,20 +53,27 @@ interface PaymentRequirements {
 // }
 
 // Service pricing (in USD)
-const SERVICE_PRICING: Record<string, { price: number; description: string }> =
+const SERVICE_PRICING: Record<string, { price: number; platformFee: number; description: string }> =
   {
-    "gpt-4": { price: 0.03, description: "GPT-4 text completion" },
-    "gpt-4-turbo": { price: 0.01, description: "GPT-4 Turbo completion" },
-    "claude-3": { price: 0.025, description: "Claude 3 Sonnet completion" },
-    "dall-e-3": { price: 0.04, description: "DALL-E 3 image generation" },
-    whisper: { price: 0.006, description: "Whisper transcription per minute" },
-    "web-search": { price: 0.005, description: "Web search query" },
+    "gpt-4": { price: 0.03, platformFee: 0.005, description: "GPT-4 text completion" },
+    "gpt-4-turbo": { price: 0.01, platformFee: 0.002, description: "GPT-4 Turbo completion" },
+    "claude-3": { price: 0.025, platformFee: 0.004, description: "Claude 3 Sonnet completion" },
+    "dall-e-3": { price: 0.04, platformFee: 0.008, description: "DALL-E 3 image generation" },
+    "whisper": { price: 0.006, platformFee: 0.001, description: "Whisper audio transcription" },
+    "web-search": { price: 0.005, platformFee: 0.001, description: "Web search" },
   };
 
 // In-memory stores (use Redis in production)
 const verifiedPayments = new Map<
   string,
-  { amount: number; service: string; timestamp: Date }
+  { 
+    amount: number; 
+    basePrice: number; 
+    platformFee: number; 
+    isSubscription: boolean;
+    service: string; 
+    timestamp: Date 
+  }
 >();
 const yieldAllocations = new Map<
   string,
@@ -204,6 +213,8 @@ const x402Plugin: FastifyPluginAsync = async (fastify): Promise<void> => {
     // const { walletAddress } = request.body;
 
     const serviceInfo = SERVICE_PRICING[service];
+    const isSubscription = request.headers["x-subscription"] === "active";
+
     if (!serviceInfo) {
       return reply.status(400).send({ error: "Unknown service" });
     }
@@ -231,9 +242,15 @@ const x402Plugin: FastifyPluginAsync = async (fastify): Promise<void> => {
     // Mark allocation as used
     yieldAllocations.delete(paymentId);
 
+    // Total cost calculation
+    const totalCost = isSubscription ? 0 : serviceInfo.price + serviceInfo.platformFee;
+
     // Record the payment
     verifiedPayments.set(paymentId, {
-      amount: serviceInfo.price,
+      amount: totalCost,
+      basePrice: serviceInfo.price,
+      platformFee: serviceInfo.platformFee,
+      isSubscription,
       service,
       timestamp: new Date(),
     });
@@ -241,7 +258,7 @@ const x402Plugin: FastifyPluginAsync = async (fastify): Promise<void> => {
     // Execute the AI service
     let result;
     try {
-      result = await executeAIService(service, input);
+      result = await executeAIService(service, input, request.body.walletAddress, isSubscription);
     } catch (error) {
       // Refund on failure (in production, this would be an actual refund)
       return reply.status(500).send({
@@ -255,15 +272,17 @@ const x402Plugin: FastifyPluginAsync = async (fastify): Promise<void> => {
       success: true,
       paymentId,
       service,
-      cost: serviceInfo.price,
-      result,
+      cost: totalCost,
       receipt: {
         id: paymentId,
-        amount: serviceInfo.price,
+        amount: totalCost,
+        base: serviceInfo.price,
+        fee: serviceInfo.platformFee,
         currency: "USD (from sUSDV yield)",
         timestamp: new Date().toISOString(),
         network: NETWORK,
       },
+      result,
     });
   });
 
@@ -276,7 +295,6 @@ const x402Plugin: FastifyPluginAsync = async (fastify): Promise<void> => {
     Querystring: { demo?: string };
   }>("/yield/:wallet", async (request, reply) => {
     const { wallet } = request.params;
-    const demo = request.query.demo === "true";
 
     try {
       new PublicKey(wallet);
@@ -284,7 +302,7 @@ const x402Plugin: FastifyPluginAsync = async (fastify): Promise<void> => {
       return reply.status(400).send({ error: "Invalid wallet address" });
     }
 
-    const spendableYield = await getSpendableYield(wallet, demo);
+    const spendableYield = await getSpendableYield(wallet);
 
     return reply.send({
       wallet,
@@ -322,109 +340,5 @@ const x402Plugin: FastifyPluginAsync = async (fastify): Promise<void> => {
   });
 };
 
-/**
- * Get spendable yield for a wallet
- * Spendable yield = sUSDV appreciation (not the principal)
- */
-async function getSpendableYield(
-  wallet: string,
-  demo = false
-): Promise<number> {
-  // Demo mode for devnet testing
-  if (demo || NETWORK === "devnet") {
-    // Generate consistent demo yield based on wallet
-    const hash = wallet.split("").reduce((a, b) => a + b.charCodeAt(0), 0);
-    const baseYield = (hash % 50) + 5; // $5-$55 demo yield
-    return Math.round(baseYield * 100) / 100;
-  }
-
-  // Production: query actual sUSDV balance and calculate appreciation
-  try {
-    // TODO: Implement actual sUSDV yield calculation
-    // const connection = new Connection(SOLANA_RPC[NETWORK], "confirmed");
-    // 1. Get sUSDV balance from Solomon Labs token account
-    // 2. Get current exchange rate from Solomon Labs contract
-    // 3. Calculate: yield = (sUSDV * exchangeRate) - principal
-
-    return 0;
-  } catch (error) {
-    console.error("Failed to fetch yield:", error);
-    return 0;
-  }
-}
-
-/**
- * Execute AI service (mock for beta)
- * In production, integrate with actual AI providers
- */
-async function executeAIService(
-  service: string,
-  input: string
-): Promise<object> {
-  // Simulate processing delay
-  await new Promise((r) => setTimeout(r, 500 + Math.random() * 1000));
-
-  const responses: Record<string, () => object> = {
-    "gpt-4": () => ({
-      model: "gpt-4",
-      content: `[GPT-4 Response]\n\nBased on your query: "${input.slice(
-        0,
-        100
-      )}..."\n\nThis is a simulated response for beta testing. In production, this would connect to OpenAI's API via x402 payment.`,
-      tokens: { prompt: input.length, completion: 150 },
-    }),
-    "gpt-4-turbo": () => ({
-      model: "gpt-4-turbo",
-      content: `[GPT-4 Turbo Response]\n\nQuery: "${input.slice(
-        0,
-        100
-      )}..."\n\nSimulated response for devnet beta. Production will use real OpenAI integration.`,
-      tokens: { prompt: input.length, completion: 120 },
-    }),
-    "claude-3": () => ({
-      model: "claude-3-sonnet",
-      content: `[Claude 3 Response]\n\nAnalyzing: "${input.slice(
-        0,
-        100
-      )}..."\n\nThis is a beta simulation. Production connects to Anthropic's API.`,
-      tokens: { input: input.length, output: 130 },
-    }),
-    "dall-e-3": () => ({
-      model: "dall-e-3",
-      prompt: input,
-      imageUrl:
-        "https://placehold.co/1024x1024/1a1a2e/10b981?text=x402+Generated",
-      revisedPrompt: input,
-    }),
-    whisper: () => ({
-      model: "whisper-1",
-      transcription: "[Transcription would appear here]",
-      duration: 60,
-    }),
-    "web-search": () => ({
-      query: input,
-      results: [
-        {
-          title: "Result 1",
-          url: "https://example.com/1",
-          snippet: "Relevant content...",
-        },
-        {
-          title: "Result 2",
-          url: "https://example.com/2",
-          snippet: "More information...",
-        },
-      ],
-      totalResults: 2,
-    }),
-  };
-
-  const handler = responses[service];
-  if (!handler) {
-    throw new Error(`Service ${service} not implemented`);
-  }
-
-  return handler();
-}
 
 export default x402Plugin;

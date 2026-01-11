@@ -1,3 +1,4 @@
+import "dotenv/config";
 import { join } from "node:path";
 import AutoLoad, { AutoloadPluginOptions } from "@fastify/autoload";
 import cors from "@fastify/cors";
@@ -15,13 +16,34 @@ const app: FastifyPluginAsync<AppOptions> = async (
 ): Promise<void> => {
   // Enable CORS for frontend requests
   await fastify.register(cors, {
-    origin: [
-      "http://localhost:3000",
-      "http://localhost:3001",
-      process.env.FRONTEND_URL || "http://localhost:3000",
-    ],
+    origin: (origin, cb) => {
+      // Allow if there's no origin (e.g., local tools) 
+      // or if it matches localhost/127.0.0.1 for development
+      if (!origin || /localhost|127\.0\.0\.1|::1/.test(origin)) {
+        cb(null, true);
+        return;
+      }
+      
+      const allowedOrigins = [
+        process.env.FRONTEND_URL,
+      ].filter(Boolean);
+
+      if (allowedOrigins.includes(origin)) {
+        cb(null, true);
+        return;
+      }
+      
+      // Still allow but log for debugging if needed
+      if (process.env.NODE_ENV === "development") {
+        console.warn(`[CORS] Allowing origin despite mismatch: ${origin}`);
+        cb(null, true);
+        return;
+      }
+
+      cb(new Error("Not allowed by CORS"), false);
+    },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Payment"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Payment", "X-Subscription"],
     credentials: true,
   });
 

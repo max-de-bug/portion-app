@@ -63,7 +63,7 @@ export const ProcessTransactionsContent = memo(function ProcessTransactionsConte
           </div>
         )}
         {transactions.map((tx, idx) => (
-          <TransactionRow key={tx.id} transaction={tx} isLatest={idx === 0} />
+          <TransactionRow key={tx.id || `sim-tx-${idx}`} transaction={tx} isLatest={idx === 0} />
         ))}
       </div>
     </div>

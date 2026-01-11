@@ -14,11 +14,23 @@ export const CTA = () => {
 
     setStatus("loading");
     
-    // Simulate API call
-    setTimeout(() => {
-      setStatus("success");
-      setEmail("");
-    }, 1500);
+    try {
+      const response = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:3001"}/newsletter/subscribe`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email }),
+      });
+
+      if (response.ok) {
+        setStatus("success");
+        setEmail("");
+      } else {
+        setStatus("error");
+      }
+    } catch (error) {
+      console.error("Subscription error:", error);
+      setStatus("error");
+    }
   };
 
   return (
@@ -30,10 +42,10 @@ export const CTA = () => {
     >
       <div className="max-w-3xl mx-auto text-center">
         <h2 className="text-3xl md:text-4xl font-bold text-foreground mb-4">
-          Ready to spend your yield?
+          Subscribe to updates
         </h2>
         <p className="text-lg text-muted-foreground mb-8">
-          Join early adopters building the future of yield-powered payments
+          Stay informed about the future of yield-powered payments and early access.
         </p>
         
         {status === "success" ? (
@@ -42,8 +54,8 @@ export const CTA = () => {
             animate={{ opacity: 1, scale: 1 }}
             className="p-6 bg-emerald-100 rounded-xl max-w-md mx-auto text-emerald-800"
           >
-            <p className="font-semibold text-lg">You're on the list! 🎉</p>
-            <p className="text-sm mt-1">We'll verify your eligibility for early access soon.</p>
+            <p className="font-semibold text-lg">You're on the list! 🚀</p>
+            <p className="text-sm mt-1">Follow our updates on X and stay tuned for early access.</p>
           </motion.div>
         ) : (
           <form onSubmit={handleSubmit} className="flex flex-col sm:flex-row items-center justify-center gap-4 max-w-md mx-auto">
@@ -63,7 +75,7 @@ export const CTA = () => {
               className="w-full sm:w-auto whitespace-nowrap bg-emerald-600 hover:bg-emerald-500 text-white"
               disabled={status === "loading"}
             >
-              {status === "loading" ? "Joining..." : "Request Access"}
+              {status === "loading" ? "Joining..." : "Join Waitlist"}
             </Button>
           </form>
         )}

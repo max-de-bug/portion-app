@@ -72,7 +72,7 @@ export function TransactionActivity() {
             </div>
           ) : (
             recentTransactions.map((tx, idx) => (
-              <TransactionItem key={tx.id} tx={tx} isFirst={idx === 0} />
+              <TransactionItem key={tx.id || `fallback-tx-${idx}`} tx={tx} isFirst={idx === 0} />
             ))
           )}
         </div>

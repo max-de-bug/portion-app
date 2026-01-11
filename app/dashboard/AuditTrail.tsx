@@ -145,7 +145,7 @@ export function AuditTrail() {
             </div>
           ) : (
             recentEvents.map((event, idx) => (
-              <AuditEventItem key={event.id} event={event} isFirst={idx === 0} />
+              <AuditEventItem key={event.id || `fallback-ev-${idx}`} event={event} isFirst={idx === 0} />
             ))
           )}
         </div>

@@ -220,8 +220,10 @@ function HelpTooltip() {
     <div className="group relative">
       <HelpCircle className="w-4 h-4 text-muted-foreground cursor-help" />
       <div className="absolute bottom-full right-0 mb-2 w-64 p-3 bg-background border border-border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10 text-xs text-muted-foreground">
-        Policies control how your yield can be spent. Only enabled policies are
-        enforced.
+        <p className="font-bold text-foreground mb-1">Policy Controls</p>
+        <p className="mb-2">Policies control how your yield can be spent. Only enabled policies are enforced.</p>
+        <p className="font-medium text-foreground mb-1">Merchant Whitelist</p>
+        <p>A security guardrail that restricts your AI agents to only spend yield at specific, approved services you trust.</p>
       </div>
     </div>
   );

@@ -214,6 +214,7 @@ export const InteractiveHero = memo(function InteractiveHero() {
                 fill="none" 
                 stroke="#10b981" 
                 strokeWidth="0.15"
+                initial={{ scale: 1, opacity: 0.3 }}
                 animate={{ 
                   scale: lightningPhase === 1 ? [1, 1.5, 1] : 1,
                   opacity: lightningPhase === 1 ? [0.3, 1, 0.3] : 0.3
@@ -324,6 +325,7 @@ export const InteractiveHero = memo(function InteractiveHero() {
               fill="none"
               stroke="#34d399"
               strokeWidth="2"
+              initial={{ scale: 1, opacity: 0 }}
               animate={{
                 scale: lightningPhase === 1 ? [0.8, 1.5] : 1,
                 opacity: lightningPhase === 1 ? [0.8, 0] : 0
@@ -358,6 +360,7 @@ export const InteractiveHero = memo(function InteractiveHero() {
                         ? 'bg-gradient-to-br from-[#022c22] to-[#065f46] shadow-emerald-500/50' 
                         : 'bg-emerald-100'
                     }`}
+                    initial={{ filter: "none" }}
                     animate={{ 
                       filter: isDetected || lightningPhase >= 1 ? "drop-shadow(0 0 8px rgba(16,185,129,0.6))" : "none"
                     }}
@@ -376,6 +379,7 @@ export const InteractiveHero = memo(function InteractiveHero() {
               fill="#064e3b"
               fontSize="2"
               className="font-black tracking-[0.2em] uppercase pointer-events-none"
+              initial={{ opacity: 0.6, y: 12 }}
               animate={{ opacity: isDetected ? 1 : 0.6, y: isDetected ? 13 : 12 }}
             >
               {isDetected ? "FLOWS ACTIVE" : "DETECT YIELD"}
@@ -396,6 +400,7 @@ export const InteractiveHero = memo(function InteractiveHero() {
                 cy={merchant.y}
                 r="5"
                 fill="#34d399"
+                initial={{ scale: 0, opacity: 0 }}
                 animate={{
                   scale: lightningPhase === 2 ? [0.5, 1.5] : 0,
                   opacity: lightningPhase === 2 ? [0.6, 0] : 0

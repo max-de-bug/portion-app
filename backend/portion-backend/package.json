@@ -8,11 +8,13 @@
   },
   "scripts": {
     "test": "npm run build:ts && tsc -p test/tsconfig.json && c8 node --test -r ts-node/register \"test/**/*.ts\"",
-    "start": "npm run build:ts && fastify start -l info dist/app.js",
+    "start": "npm run build:ts && fastify start -l info dist/src/app.js",
     "build:ts": "tsc",
     "watch:ts": "tsc -w",
+    "db:push": "drizzle-kit push",
+    "db:studio": "drizzle-kit studio",
     "dev": "npm run build:ts && concurrently -k -p \"[{name}]\" -n \"TypeScript,App\" -c \"yellow.bold,cyan.bold\" \"npm:watch:ts\" \"npm:dev:start\"",
-    "dev:start": "cross-env PORT=3001 fastify start --ignore-watch=.ts$ -w -l info -P dist/app.js"
+    "dev:start": "cross-env PORT=3001 fastify start --ignore-watch=.ts$ -w -l info -P dist/src/app.js"
   },
   "keywords": [
     "x402",
@@ -30,15 +32,21 @@
     "@solana/web3.js": "^1.98.0",
     "@x402/core": "^2.1.0",
     "@x402/svm": "2.1.0",
+    "dotenv": "^17.2.3",
+    "drizzle-orm": "^0.45.1",
     "fastify": "^5.0.0",
     "fastify-cli": "^7.4.1",
-    "fastify-plugin": "^5.0.0"
+    "fastify-plugin": "^5.0.0",
+    "postgres": "^3.4.8",
+    "resend": "^6.7.0"
   },
   "devDependencies": {
-    "@types/node": "^24.0.8",
+    "@types/node": "^24.10.7",
+    "@types/pg": "^8.16.0",
     "c8": "^10.1.2",
     "concurrently": "^9.0.0",
     "cross-env": "^7.0.3",
+    "drizzle-kit": "^0.31.8",
     "fastify-tsconfig": "^3.0.0",
     "ts-node": "^10.4.0",
     "typescript": "~5.9.2"

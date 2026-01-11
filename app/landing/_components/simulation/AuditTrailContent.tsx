@@ -61,7 +61,7 @@ export const AuditTrailContent = memo(function AuditTrailContent({
           </div>
         )}
         {auditLogs.map((log, idx) => (
-          <AuditLogRow key={log.id} log={log} isLatest={idx === 0} />
+          <AuditLogRow key={log.id || `sim-log-${idx}`} log={log} isLatest={idx === 0} />
         ))}
       </div>
     </div>

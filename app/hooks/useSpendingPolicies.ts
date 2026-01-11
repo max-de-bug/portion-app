@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useCallback, useEffect } from "react";
+import { useYieldStore } from "@/app/store/useYieldStore";
 
 /**
  * Spending policy types for x402 payments
@@ -57,8 +58,8 @@ const STORAGE_KEY = "portion_spending_policies";
  * Persists to localStorage with real-time updates
  */
 export function useSpendingPolicies() {
+  const { dailySpent, recordSpending: storeRecordSpending } = useYieldStore();
   const [policies, setPolicies] = useState<SpendingPolicy[]>(DEFAULT_POLICIES);
-  const [dailySpent, setDailySpent] = useState(0);
   const [isLoading, setIsLoading] = useState(true);
 
   // Load from localStorage on mount
@@ -68,7 +69,11 @@ export function useSpendingPolicies() {
       if (stored) {
         const data: PolicyState = JSON.parse(stored);
         setPolicies(data.policies);
-        setDailySpent(data.dailySpent);
+        // Sync global store with persisted value if available
+        const { setYield } = useYieldStore.getState();
+        if (data.dailySpent) {
+          useYieldStore.getState().recordSpending(data.dailySpent - useYieldStore.getState().dailySpent);
+        }
       }
     } catch {
       // Use defaults on error
@@ -141,11 +146,12 @@ export function useSpendingPolicies() {
   }, [getDailyLimit, dailySpent]);
 
   const recordSpending = useCallback((amount: number) => {
-    setDailySpent((prev) => prev + amount);
-  }, []);
+    storeRecordSpending(amount);
+  }, [storeRecordSpending]);
 
   const resetDailySpending = useCallback(() => {
-    setDailySpent(0);
+    const { reset } = useYieldStore.getState();
+    reset(); // Resetting yield store also resets dailySpent
   }, []);
 
   return {

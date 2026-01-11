@@ -110,42 +110,10 @@ export const WalletPopover = () => {
               transition={{ duration: 0.2 }}
               className="absolute right-0 top-12 w-[320px] bg-[#fdfbf7] rounded-3xl shadow-xl border border-[#e5e7eb] z-50 overflow-hidden"
             >
-              {/* Header Tabs */}
-              <div className="flex items-center justify-between px-6 pt-6 pb-2">
-                <div className="flex items-center gap-4 text-sm font-bold text-gray-400">
-                  <button
-                    onClick={() => setActiveTab("home")}
-                    className={`transition-colors hover:text-gray-900 ${
-                      activeTab === "home" ? "text-gray-900" : ""
-                    }`}
-                  >
-                    Home
-                  </button>
-                  <button
-                    onClick={() => setActiveTab("stats")}
-                    className={`relative transition-colors hover:text-gray-900 ${
-                      activeTab === "stats" ? "text-blue-500" : ""
-                    }`}
-                  >
-                    Stats
-                    {activeTab === "stats" && (
-                      <motion.div
-                        layoutId="underline"
-                        className="absolute -bottom-1 left-0 right-0 h-0.5 bg-blue-500 rounded-full"
-                      />
-                    )}
-                  </button>
-                </div>
-
-                <div className="px-3 py-1 rounded-full bg-[#d1f4e8] text-[#059669] text-xs font-bold font-mono border border-[#a7f3d0]">
-                  {shortenedAddress}
-                </div>
-              </div>
-
               <div className="p-6 pt-2">
                 {/* Address Row */}
                 <div
-                  className="flex items-center gap-2 mb-6 group cursor-pointer"
+                  className="flex items-center gap-2 mb-6 p-2 group cursor-pointer"
                   onClick={handleCopy}
                 >
                   <div className="w-8 h-8 rounded-xl bg-[#a78bfa] flex items-center justify-center text-white">
@@ -196,8 +164,8 @@ export const WalletPopover = () => {
                     {/* USDv */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-[#fbbf24] border-2 border-orange-200 flex items-center justify-center text-orange-700">
-                          <DollarSign className="w-5 h-5" />
+                        <div className="w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center overflow-hidden">
+                          <img src="/USDv.svg" alt="USDv" className="w-full h-full object-contain" />
                         </div>
                         <span className="font-medium text-gray-600">USDv</span>
                       </div>
@@ -214,8 +182,8 @@ export const WalletPopover = () => {
                     {/* sUSDv */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-[#fbbf24] border-2 border-orange-200 flex items-center justify-center text-orange-700 relative">
-                          <DollarSign className="w-5 h-5" />
+                        <div className="w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center relative overflow-visible">
+                          <img src="/sUSDv.svg" alt="sUSDv" className="w-full h-full object-contain" />
                           <div className="absolute -bottom-1 -right-1 w-4 h-4 bg-emerald-500 rounded-full border-2 border-[#f3f0e8] flex items-center justify-center">
                             <Zap className="w-2 h-2 text-white" />
                           </div>
@@ -265,10 +233,10 @@ export const WalletPopover = () => {
                     {/* SOL (Solana) - REAL TIME */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-[#14F195] flex items-center justify-center text-white border-2 border-[#000000]/10">
-                          <span className="font-bold text-xs text-black">
-                            SOL
-                          </span>
+                        <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-white border-2 border-white/10 shadow-sm overflow-hidden p-1.5">
+                          <svg viewBox="0 0 397 311" className="w-full h-full fill-white">
+                            <path d="M64.6 237.9c2.4 2.4 5.7 3.7 9.2 3.7h314.8c5.8 0 8.7-7 4.6-11.1l-64.6-64.6c-2.4-2.4-5.7-3.7-9.2-3.7H4.6c-5.8 0-8.7 7-4.6 11.1l64.6 64.6zm332.4-162c-2.4-2.4-5.7-3.7-9.2-3.7H73c-5.8 0-8.7 7-4.6 11.1l64.6 64.6c2.4 2.4 5.7 3.7 9.2 3.7h314.8c5.8 0 8.7-7 4.6-11.1l-64.6-64.6zM73 0c-3.5 0-6.8 1.3-9.2 3.7L-.8 68.3c-4.1 4.1-1.2 11.1 4.6 11.1h314.8c3.5 0 6.8-1.3 9.2-3.7l64.6-64.6c4.1-4.1 1.2-11.1-4.6-11.1H73z" />
+                          </svg>
                         </div>
                         <div className="flex flex-col">
                           <span className="font-medium text-gray-600">SOL</span>
@@ -317,8 +285,8 @@ export const WalletPopover = () => {
                     {/* SOLO */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-[#1e293b] flex items-center justify-center text-white">
-                          <Layers className="w-4 h-4" />
+                        <div className="w-8 h-8 rounded-full bg-white border border-gray-100 flex items-center justify-center overflow-hidden">
+                          <img src="/Solomon.svg" alt="SOLO" className="w-full h-full object-contain" />
                         </div>
                         <span className="font-medium text-gray-600">SOLO</span>
                       </div>

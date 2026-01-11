@@ -3,6 +3,7 @@
 import { useState, useRef, useEffect, useCallback } from "react";
 import { AI_SERVICES, AIService } from "@/app/config/agent-services";
 import { useYieldStore } from "@/app/store/useYieldStore";
+import { useTransactionActivity } from "@/app/hooks/useTransactionActivity";
 
 export interface Message {
   id: string;
@@ -14,10 +15,11 @@ export interface Message {
   cost?: number;
 }
 
-const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://localhost:3001";
+const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:3001";
 
 export function useAgentChat(walletAddress: string) {
-  const { spendableYield: currentYield, deductYield } = useYieldStore();
+  const { spendableYield: currentYield, deductYield, hasSubscription } = useYieldStore();
+  const { addTransaction } = useTransactionActivity();
   const [messages, setMessages] = useState<Message[]>([
     {
       id: "welcome",
@@ -55,17 +57,20 @@ export function useAgentChat(walletAddress: string) {
 
   const executeService = useCallback(
     async (service: AIService, userInput: string) => {
-      if (currentYield < service.pricePerCall) {
+      const totalCost = service.pricePerCall + service.platformFee;
+      
+      if (!hasSubscription && currentYield < totalCost) {
         addMessage(
-          `Insufficient yield.\n\nRequired: $${service.pricePerCall.toFixed(3)}\nAvailable: $${currentYield.toFixed(2)}\n\nYour sUSDV needs more time to appreciate.`,
+          `Insufficient yield.\n\nRequired: $${totalCost.toFixed(3)}\nAvailable: $${currentYield.toFixed(2)}\n\nYour sUSDV needs more time to appreciate or you can enable a Monthly Subscription.`,
           "assistant",
           { status: "error" }
         );
         return;
       }
 
+      const displayCost = hasSubscription ? "Included in Subscription" : `$${totalCost.toFixed(3)} ($${service.platformFee.toFixed(3)} fee)`;
       const msgId = addMessage(
-        `Processing ${service.name} request...\n\nCost: $${service.pricePerCall.toFixed(3)}\nInput: "${userInput.slice(0, 50)}${userInput.length > 50 ? "..." : ""}"`,
+        `Processing ${service.name} request...\n\nCost: ${displayCost}\nInput: "${userInput.slice(0, 50)}${userInput.length > 50 ? "..." : ""}"`,
         "assistant",
         { status: "processing" }
       );
@@ -95,6 +100,7 @@ export function useAgentChat(walletAddress: string) {
           headers: {
             "Content-Type": "application/json",
             "X-Payment": "yield-authorized",
+            "X-Subscription": hasSubscription ? "active" : "none",
           },
           body: JSON.stringify({
             input: userInput,
@@ -108,27 +114,45 @@ export function useAgentChat(walletAddress: string) {
         }
 
         const result = await executeRes.json();
+        const isSimulated = result.result?.isSimulated || false;
 
+        const totalCost = service.pricePerCall + service.platformFee;
         let responseContent = "";
         if (service.id === "dall-e-3") {
-          responseContent = `Image generated.\n\nPrompt: "${userInput}"\n\n[Image: ${result.result.imageUrl}]\n\nCost: $${service.pricePerCall.toFixed(3)}`;
+          responseContent = `Image generated.\n\nPrompt: "${userInput}"\n\n[Image: ${result.result.imageUrl}]\n\nCost: ${isSimulated ? "None (Simulation)" : displayCost}`;
         } else if (service.id === "web-search") {
           const results = result.result.results || [];
           responseContent = `Search complete.\n\nQuery: "${userInput}"\n\nResults:\n${results
             .map((r: { title: string }, i: number) => `${i + 1}. ${r.title}`)
-            .join("\n")}\n\nCost: $${service.pricePerCall.toFixed(3)}`;
+            .join("\n")}\n\nCost: ${isSimulated ? "None (Simulation)" : displayCost}`;
         } else {
-          responseContent = `${result.result.content || JSON.stringify(result.result, null, 2)}\n\nCost: $${service.pricePerCall.toFixed(3)}`;
+          responseContent = `${result.result.content || JSON.stringify(result.result, null, 2)}\n\nCost: ${isSimulated ? "None (Simulation)" : displayCost}`;
         }
 
         updateMessage(msgId, {
           content: responseContent,
           status: "completed",
-          cost: service.pricePerCall,
+          cost: (hasSubscription || isSimulated) ? 0 : totalCost,
         });
 
-        deductYield(service.pricePerCall);
+        // Only record transaction and deduct yield if it was a real, successful call
+        if (!isSimulated) {
+          addTransaction({
+            service: service.name,
+            type: "API",
+            amount: hasSubscription ? "SUB" : `$${totalCost.toFixed(3)}`,
+            status: "Processing", 
+            source: hasSubscription ? "x402 Monthly" : "sUSDV Yield",
+          });
+
+          if (!hasSubscription) {
+            deductYield(totalCost);
+            const { recordSpending } = useYieldStore.getState();
+            recordSpending(totalCost);
+          }
+        }
       } catch (error) {
+        console.error("[useAgentChat] Service execution error:", error);
         updateMessage(msgId, {
           content: `Request failed: ${error instanceof Error ? error.message : "Unknown error"}\n\nNo yield was spent.`,
           status: "error",
@@ -149,7 +173,6 @@ export function useAgentChat(walletAddress: string) {
     try {
       if (selectedService) {
         await executeService(selectedService, userInput);
-        setSelectedService(null);
       } else {
         const lower = userInput.toLowerCase();
         if (lower.includes("balance") || lower.includes("yield") || lower.includes("how much")) {
