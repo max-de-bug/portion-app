@@ -1,7 +1,6 @@
 "use client";
 
 import React, { useState, useEffect, useRef, useCallback } from "react";
-import { motion } from "framer-motion";
 
 const GRID_SIZE = 40; // Size of each square in pixels
 

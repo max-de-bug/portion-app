@@ -8,30 +8,37 @@ import {
   Play,
   ArrowDownToLine,
   ArrowUpFromLine,
-  CreditCard,
   RefreshCw,
 } from "lucide-react";
 import { useState } from "react";
-import { useSolomonYield } from "@/app/hooks/useSolomonYield";
+import { useSpendableYield, useSolomonYieldSync } from "@/app/hooks/useSolomonYield";
+import { usePrivy } from "@privy-io/react-auth";
 import { AgentChat } from "./AgentChat";
-import { ReceiveModal, WithdrawModal, PayCardModal } from "./ActionModals";
+import { ReceiveModal, WithdrawModal } from "./ActionModals";
 
 interface StreamingValueProps {
   walletAddress?: string;
+  onSpend: () => void;
+  onReceive: () => void;
+  onWithdraw: () => void;
 }
 
-export const StreamingValue = ({ walletAddress }: StreamingValueProps) => {
+export const StreamingValue = ({ 
+  walletAddress,
+  onSpend,
+  onReceive,
+  onWithdraw,
+}: StreamingValueProps) => {
   const [showValue, setShowValue] = useState(true);
-  const [isSpendOpen, setIsSpendOpen] = useState(false);
-  const [isReceiveOpen, setIsReceiveOpen] = useState(false);
-  const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
-  const [isPayCardOpen, setIsPayCardOpen] = useState(false);
 
   const {
-    data: yieldData,
+    spendableYield,
     isLoading,
-    refetch,
-  } = useSolomonYield(walletAddress);
+    isDemo,
+  } = useSpendableYield(walletAddress);
+  
+  // Need raw data for other metrics
+  const { data: yieldData, refetch } = useSolomonYieldSync(walletAddress);
 
   // Format currency values
   const formatCurrency = (value: number) => {
@@ -43,8 +50,6 @@ export const StreamingValue = ({ walletAddress }: StreamingValueProps) => {
     }).format(value);
   };
 
-  // Calculate spendable yield (yield that can be spent without touching principal)
-  const spendableYield = yieldData?.spendableYield ?? 0;
   const formattedSpendableYield = formatCurrency(spendableYield);
 
   return (
@@ -158,13 +163,13 @@ export const StreamingValue = ({ walletAddress }: StreamingValueProps) => {
         </div>
 
         {/* Action Buttons */}
-        <div className="grid grid-cols-4 gap-3">
+        <div className="grid grid-cols-3 gap-3">
           {/* SPEND - Opens AI agent to spend yield on services */}
           <Button
             variant="success"
             className="gap-2"
             disabled={spendableYield <= 0}
-            onClick={() => setIsSpendOpen(true)}
+            onClick={onSpend}
             title="Spend yield on x402 services via AI agent"
           >
             <Play className="w-4 h-4" />
@@ -175,7 +180,7 @@ export const StreamingValue = ({ walletAddress }: StreamingValueProps) => {
           <Button
             variant="glass"
             className="gap-2"
-            onClick={() => setIsReceiveOpen(true)}
+            onClick={onReceive}
             title="Get address to receive sUSDV deposits"
           >
             <ArrowDownToLine className="w-4 h-4" />
@@ -187,48 +192,13 @@ export const StreamingValue = ({ walletAddress }: StreamingValueProps) => {
             variant="glass"
             className="gap-2"
             disabled={spendableYield <= 0}
-            onClick={() => setIsWithdrawOpen(true)}
+            onClick={onWithdraw}
             title="Withdraw earned yield as USDV"
           >
             <ArrowUpFromLine className="w-4 h-4" />
             Withdraw
           </Button>
-
-          {/* PAY CARD - x402 virtual debit card */}
-          <Button
-            variant="outline"
-            className="gap-2 border-primary/30 hover:border-primary hover:bg-accent"
-            onClick={() => setIsPayCardOpen(true)}
-            title="Create x402 virtual card for yield-backed spending"
-          >
-            <CreditCard className="w-4 h-4 text-primary" />
-            <span className="text-primary">Pay Card</span>
-          </Button>
         </div>
-
-        {/* Modals */}
-        <AgentChat
-          isOpen={isSpendOpen}
-          onClose={() => setIsSpendOpen(false)}
-          walletAddress={walletAddress}
-          availableYield={spendableYield}
-        />
-        <ReceiveModal
-          isOpen={isReceiveOpen}
-          onClose={() => setIsReceiveOpen(false)}
-          walletAddress={walletAddress || ""}
-        />
-        <WithdrawModal
-          isOpen={isWithdrawOpen}
-          onClose={() => setIsWithdrawOpen(false)}
-          availableYield={spendableYield}
-          walletAddress={walletAddress || ""}
-        />
-        <PayCardModal
-          isOpen={isPayCardOpen}
-          onClose={() => setIsPayCardOpen(false)}
-          availableYield={spendableYield}
-        />
       </div>
     </div>
   );

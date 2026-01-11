@@ -1,8 +1,5 @@
 "use client";
 
-// Removed unused Zap import
-// import { Zap } from "lucide-react"; 
-
 export const Footer = () => (
   <footer className="py-12 px-6 border-t border-border bg-white">
     <div className="max-w-6xl mx-auto flex flex-col md:flex-row items-center justify-between gap-6">

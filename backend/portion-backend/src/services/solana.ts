@@ -25,12 +25,40 @@ export const TOKEN_MINTS = {
 let connectionInstance: Connection | null = null;
 
 /**
+ * Helper for exponential backoff retry
+ */
+async function withRetry<T>(
+  fn: () => Promise<T>,
+  maxRetries = 3,
+  initialDelay = 500
+): Promise<T> {
+  let lastError: any;
+  for (let i = 0; i < maxRetries; i++) {
+    try {
+      return await fn();
+    } catch (error: any) {
+      lastError = error;
+      // Only retry on rate limits (429) or network errors
+      if (error.message?.includes("429") || error.code === 429) {
+        const delay = initialDelay * Math.pow(2, i);
+        console.log(`[Solana Service] Rate limited. Retrying in ${delay}ms...`);
+        await new Promise((resolve) => setTimeout(resolve, delay));
+        continue;
+      }
+      throw error;
+    }
+  }
+  throw lastError;
+}
+
+/**
  * Get a working Solana connection with fallback
  */
 export async function getConnection(): Promise<Connection> {
   if (connectionInstance) {
     try {
-      await connectionInstance.getLatestBlockhash();
+      // Fast check
+      await connectionInstance.getSlot("confirmed");
       return connectionInstance;
     } catch {
       connectionInstance = null;
@@ -43,7 +71,8 @@ export async function getConnection(): Promise<Connection> {
         commitment: "confirmed",
         confirmTransactionInitialTimeout: 10000,
       });
-      await connection.getLatestBlockhash();
+      // Test the connection
+      await connection.getSlot("confirmed");
       connectionInstance = connection;
       return connection;
     } catch (error) {
@@ -59,10 +88,12 @@ export async function getConnection(): Promise<Connection> {
  * Get SOL balance for a wallet
  */
 export async function getSolBalance(walletAddress: string): Promise<number> {
-  const connection = await getConnection();
-  const publicKey = new PublicKey(walletAddress);
-  const balance = await connection.getBalance(publicKey, "confirmed");
-  return balance / LAMPORTS_PER_SOL;
+  return withRetry(async () => {
+    const connection = await getConnection();
+    const publicKey = new PublicKey(walletAddress);
+    const balance = await connection.getBalance(publicKey, "confirmed");
+    return balance / LAMPORTS_PER_SOL;
+  });
 }
 
 /**
@@ -72,11 +103,11 @@ export async function getTokenBalance(
   walletAddress: string,
   mintAddress: string
 ): Promise<{ balance: number; decimals: number; uiAmount: string }> {
-  const connection = await getConnection();
-  const wallet = new PublicKey(walletAddress);
-  const mint = new PublicKey(mintAddress);
+  return withRetry(async () => {
+    const connection = await getConnection();
+    const wallet = new PublicKey(walletAddress);
+    const mint = new PublicKey(mintAddress);
 
-  try {
     const tokenAccounts = await connection.getParsedTokenAccountsByOwner(
       wallet,
       {
@@ -95,10 +126,10 @@ export async function getTokenBalance(
       decimals: tokenAmount?.decimals || 6,
       uiAmount: tokenAmount?.uiAmountString || "0",
     };
-  } catch (error) {
-    console.error("Failed to fetch token balance:", error);
+  }).catch((error) => {
+    console.error(`Failed to fetch token balance for ${mintAddress}:`, error);
     return { balance: 0, decimals: 6, uiAmount: "0" };
-  }
+  });
 }
 
 /**

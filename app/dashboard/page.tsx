@@ -8,13 +8,21 @@ import { TransactionActivity } from "./TransactionActivity";
 import { YieldCapacity } from "./YieldCapacity";
 import { AuditTrail } from "./AuditTrail";
 import { Zap, DollarSign, Activity } from "lucide-react";
-import { useSolomonAPY } from "@/app/hooks/useSolomonYield";
+import { useSolomonAPY, useSolomonYieldSync, useRealtimeYield } from "@/app/hooks/useSolomonYield";
 import { usePrivy } from "@privy-io/react-auth";
+
+import { ReceiveModal, WithdrawModal } from "./ActionModals";
+import { AgentChat } from "./AgentChat";
+import { useState } from "react";
+import { useSpendableYield } from "@/app/hooks/useSolomonYield";
 
 export default function Dashboard() {
   const { user } = usePrivy();
   const { data: apyData, isLoading: apyLoading } = useSolomonAPY();
-  const apy = apyData?.apy ?? 0;
+  
+  const [isSpendOpen, setIsSpendOpen] = useState(false);
+  const [isReceiveOpen, setIsReceiveOpen] = useState(false);
+  const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
 
   // Find specifically the Solana wallet address from linked accounts
   const solanaWallet = user?.linkedAccounts?.find(
@@ -23,8 +31,12 @@ export default function Dashboard() {
 
   const walletAddress = solanaWallet?.address || user?.wallet?.address || "";
 
+  const { totalYield, yieldDetected, isLoading: yieldLoading } = useRealtimeYield(walletAddress || undefined);
+  const { spendableYield } = useSpendableYield(walletAddress || undefined);
+  const apy = apyData?.apy ?? 0;
+
   return (
-    <main className="p-6 space-y-6">
+    <main className="p-6 space-y-6 relative">
       {/* Stats Row */}
       <div className="grid grid-cols-3 gap-4">
         <StatCard
@@ -36,16 +48,16 @@ export default function Dashboard() {
         />
         <StatCard
           icon={DollarSign}
-          value="$0.00"
+          value={yieldLoading ? "..." : `$${totalYield.toFixed(2)}`}
           label="Total Yield"
-          trend="0.0%"
-          trendUp={true}
+          trend={`${totalYield > 0 ? "+" : ""}0.0%`}
+          trendUp={totalYield >= 0}
         />
         <StatCard
           icon={Activity}
-          value="0"
-          label="Yield Detected"
-          badge="+0"
+          value={yieldLoading ? "..." : yieldDetected.toString()}
+          label="Yield Sources"
+          badge={yieldDetected > 0 ? "Active" : "None"}
         />
       </div>
 
@@ -53,7 +65,12 @@ export default function Dashboard() {
       <div className="grid grid-cols-3 gap-6">
         {/* Spendable Value - Takes 2 columns */}
         <div className="col-span-2">
-          <StreamingValue walletAddress={walletAddress} />
+          <StreamingValue 
+            walletAddress={walletAddress} 
+            onSpend={() => setIsSpendOpen(true)}
+            onReceive={() => setIsReceiveOpen(true)}
+            onWithdraw={() => setIsWithdrawOpen(true)}
+          />
         </div>
 
         {/* Yield Capacity */}
@@ -79,6 +96,24 @@ export default function Dashboard() {
         {/* Audit Trail */}
         <AuditTrail />
       </div>
+
+      {/* Modals - Rendered at root for best stacking context */}
+      <AgentChat
+        isOpen={isSpendOpen}
+        onClose={() => setIsSpendOpen(false)}
+        walletAddress={walletAddress}
+      />
+      <ReceiveModal
+        isOpen={isReceiveOpen}
+        onClose={() => setIsReceiveOpen(false)}
+        walletAddress={walletAddress || ""}
+      />
+      <WithdrawModal
+        isOpen={isWithdrawOpen}
+        onClose={() => setIsWithdrawOpen(false)}
+        availableYield={spendableYield}
+        walletAddress={walletAddress || ""}
+      />
     </main>
   );
 }

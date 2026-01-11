@@ -30,10 +30,41 @@ interface YieldAllocation {
 // In-memory store for yield allocations (use Redis/DB in production)
 const allocations = new Map<string, YieldAllocation>();
 
+// Genesis Date for Beta Simulation: Jan 1, 2025
+const GENESIS_DATE = new Date("2025-01-01T00:00:00Z");
+
+// In-memory cache for yield data to prevent RPC rate limits
+interface CachedYield {
+  data: YieldInfo;
+  timestamp: number;
+}
+const yieldCache = new Map<string, CachedYield>();
+const CACHE_TTL = 5 * 60 * 1000; // 5 minutes cache
+
+function calculateImpliedExchangeRate(apy: number): number {
+  const now = new Date();
+  const msPerDay = 1000 * 60 * 60 * 24;
+  const daysSinceGenesis = (now.getTime() - GENESIS_DATE.getTime()) / msPerDay;
+  
+  // Compound interest formula: A = P(1 + r)^t
+  // Rate = (1 + APY)^(years)
+  const rate = Math.pow(1 + apy / 100, daysSinceGenesis / 365);
+  return rate;
+}
+
 /**
  * Calculate yield metrics for a wallet
  */
 export async function getYieldInfo(walletAddress: string): Promise<YieldInfo> {
+  // Check cache first
+  const cached = yieldCache.get(walletAddress);
+  if (cached && Date.now() - cached.timestamp < CACHE_TTL) {
+    console.log(`[Yield Service] Cache hit for ${walletAddress}`);
+    return cached.data;
+  }
+
+  console.log(`[Yield Service] Cache miss for ${walletAddress}. Fetching from RPC...`);
+  
   try {
     // Fetch token balances
     const [usdvData, susdvData] = await Promise.all([
@@ -41,8 +72,15 @@ export async function getYieldInfo(walletAddress: string): Promise<YieldInfo> {
       getTokenBalance(walletAddress, TOKEN_MINTS.sUSDV),
     ]);
 
-    const usdvBalance = parseFloat(usdvData.uiAmount);
-    const susdvBalance = parseFloat(susdvData.uiAmount);
+    let usdvBalance = parseFloat(usdvData.uiAmount);
+    let susdvBalance = parseFloat(susdvData.uiAmount);
+
+    // [BETA TESTING ONLY] Faucet Mode
+    // If user has 0 balance, simulate 1000 sUSDV so they can test features
+    if (susdvBalance === 0) {
+      susdvBalance = 1000;
+      console.log(`[BETA] Simulating 1000 sUSDV for empty wallet: ${walletAddress}`);
+    }
 
     // Calculate yield estimates
     const apy = CURRENT_APY;
@@ -52,12 +90,22 @@ export async function getYieldInfo(walletAddress: string): Promise<YieldInfo> {
     const estimatedMonthlyYield = susdvBalance * dailyRate * 30;
     const estimatedAnnualYield = susdvBalance * (apy / 100);
 
-    // In production, fetch actual pending/claimable yield from staking contract
-    // For now, calculate based on time and balance
-    const pendingYield = 0; // Would come from contract
-    const claimableYield = 0; // Would come from contract
+    // SIMULATION FOR BETA: Calculate yield based on time since genesis
+    // In production, this would fetch from the staking contract
+    const exchangeRate = calculateImpliedExchangeRate(apy);
+    
+    // Implied value of sUSDV in USDV terms
+    const currentValueInUSDV = susdvBalance * exchangeRate;
+    
+    // Yield is the appreciation above the principal (assuming principal = raw token amount for simulation)
+    // Note: In reality, principal would be tracked per deposit. For beta, we assume all sUSDV was deposited at parity.
+    const totalYieldValue = Math.max(0, currentValueInUSDV - susdvBalance);
+    
+    // Split for realism (90% pending, 10% claimable - or just 100% claimable for beta UX)
+    const pendingYield = 0; 
+    const claimableYield = totalYieldValue; 
 
-    return {
+    const result: YieldInfo = {
       walletAddress,
       usdvBalance,
       susdvBalance,
@@ -70,6 +118,11 @@ export async function getYieldInfo(walletAddress: string): Promise<YieldInfo> {
       apy,
       lastUpdated: new Date(),
     };
+
+    // Update cache
+    yieldCache.set(walletAddress, { data: result, timestamp: Date.now() });
+
+    return result;
   } catch (error) {
     console.error("Failed to get yield info:", error);
     return {

@@ -2,7 +2,7 @@
 
 import { Zap, Shield, TrendingUp } from "lucide-react";
 import { cn } from "@/lib/utils";
-import { useSolomonYield, useSolomonAPY } from "@/app/hooks/useSolomonYield";
+import { useSolomonYieldSync, useSolomonAPY } from "@/app/hooks/useSolomonYield";
 import { useSpendingPolicies } from "@/app/hooks/useSpendingPolicies";
 
 interface YieldCapacityProps {
@@ -10,9 +10,9 @@ interface YieldCapacityProps {
 }
 
 export function YieldCapacity({ walletAddress }: YieldCapacityProps) {
-  const { data: yieldData, isLoading: yieldLoading } = useSolomonYield(walletAddress);
+  const { data: yieldData, isLoading: yieldLoading } = useSolomonYieldSync(walletAddress);
   const { data: apyData, isLoading: apyLoading } = useSolomonAPY();
-  const { dailyUsagePercent, dailyLimit, dailySpent } = useSpendingPolicies();
+  const { dailyLimit, dailySpent } = useSpendingPolicies();
 
   const isLoading = yieldLoading || apyLoading;
   const apy = apyData?.apy ?? 0;

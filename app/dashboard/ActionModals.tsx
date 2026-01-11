@@ -8,7 +8,6 @@ import {
   Check,
   ArrowDownToLine,
   ArrowUpFromLine,
-  CreditCard,
   ExternalLink,
   AlertCircle,
   QrCode,
@@ -46,14 +45,14 @@ export const ReceiveModal = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 bg-black/60 backdrop-blur-md z-[10000] flex items-center justify-center p-4 scrollbar-hide"
         onClick={onClose}
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="w-full max-w-md bg-[#fdfbf7] rounded-3xl shadow-2xl overflow-hidden"
+          className="w-full max-w-md bg-[#fdfbf7] rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -75,7 +74,7 @@ export const ReceiveModal = ({
             </button>
           </div>
 
-          <div className="p-6">
+          <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
             {/* QR Code Placeholder */}
             <div className="bg-gray-100 rounded-2xl p-8 mb-6 flex flex-col items-center">
               <div className="w-40 h-40 bg-white rounded-xl flex items-center justify-center border-2 border-dashed border-gray-300 mb-4">
@@ -95,8 +94,10 @@ export const ReceiveModal = ({
                 className="flex items-center gap-2 p-3 bg-gray-100 rounded-xl cursor-pointer hover:bg-gray-200 transition-colors"
                 onClick={handleCopy}
               >
-                <code className="flex-1 text-sm font-mono text-gray-800 break-all">
-                  {walletAddress || "Connect wallet first"}
+                <code className="flex-1 text-sm font-mono text-gray-800 overflow-hidden text-ellipsis whitespace-nowrap">
+                  {walletAddress && walletAddress.length > 10
+                    ? `${walletAddress.slice(0, 4)}...${walletAddress.slice(-4)}`
+                    : walletAddress || "Connect wallet first"}
                 </code>
                 {copied ? (
                   <Check className="w-5 h-5 text-green-500 flex-shrink-0" />
@@ -167,14 +168,14 @@ export const WithdrawModal = ({
         initial={{ opacity: 0 }}
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
+        className="fixed inset-0 bg-black/60 backdrop-blur-md z-[10000] flex items-center justify-center p-4 scrollbar-hide"
         onClick={onClose}
       >
         <motion.div
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="w-full max-w-md bg-[#fdfbf7] rounded-3xl shadow-2xl overflow-hidden"
+          className="w-full max-w-md bg-[#fdfbf7] rounded-3xl shadow-2xl overflow-hidden flex flex-col max-h-[90vh]"
           onClick={(e) => e.stopPropagation()}
         >
           {/* Header */}
@@ -196,13 +197,13 @@ export const WithdrawModal = ({
             </button>
           </div>
 
-          <div className="p-6">
+          <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
             {/* Available Balance */}
             <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-6">
               <p className="text-xs text-orange-600 font-medium">
                 Available to Withdraw
               </p>
-              <p className="text-2xl font-bold text-orange-800">
+              <p className="text-2xl font-bold text-orange-800 break-all">
                 ${maxAmount.toFixed(2)}
               </p>
               <p className="text-xs text-orange-600">
@@ -242,7 +243,7 @@ export const WithdrawModal = ({
               <label className="text-xs font-medium text-gray-500 block mb-2">
                 Withdraw To
               </label>
-              <div className="flex gap-2 mb-3">
+              <div className="flex flex-col sm:flex-row gap-2 mb-3">
                 <button
                   onClick={() => setDestination("same")}
                   className={`flex-1 p-3 rounded-xl text-sm font-medium transition-colors ${
@@ -300,160 +301,4 @@ export const WithdrawModal = ({
   );
 };
 
-// ============================================
-// PAY CARD MODAL - x402 Virtual Card
-// ============================================
-interface PayCardModalProps {
-  isOpen: boolean;
-  onClose: () => void;
-  availableYield: number;
-}
 
-export const PayCardModal = ({
-  isOpen,
-  onClose,
-  availableYield,
-}: PayCardModalProps) => {
-  const [cardLimit, setCardLimit] = useState("");
-
-  if (!isOpen) return null;
-
-  return (
-    <AnimatePresence>
-      <motion.div
-        initial={{ opacity: 0 }}
-        animate={{ opacity: 1 }}
-        exit={{ opacity: 0 }}
-        className="fixed inset-0 bg-black/50 backdrop-blur-sm z-50 flex items-center justify-center p-4"
-        onClick={onClose}
-      >
-        <motion.div
-          initial={{ opacity: 0, scale: 0.95, y: 20 }}
-          animate={{ opacity: 1, scale: 1, y: 0 }}
-          exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="w-full max-w-md bg-[#fdfbf7] rounded-3xl shadow-2xl overflow-hidden"
-          onClick={(e) => e.stopPropagation()}
-        >
-          {/* Header */}
-          <div className="bg-gradient-to-r from-purple-500 to-purple-600 p-4 flex items-center justify-between">
-            <div className="flex items-center gap-3">
-              <div className="w-10 h-10 rounded-xl bg-white/20 flex items-center justify-center">
-                <CreditCard className="w-6 h-6 text-white" />
-              </div>
-              <div>
-                <h2 className="font-bold text-white">x402 Pay Card</h2>
-                <p className="text-purple-100 text-xs">Virtual debit card</p>
-              </div>
-            </div>
-            <button
-              onClick={onClose}
-              className="w-8 h-8 rounded-full bg-white/20 hover:bg-white/30 flex items-center justify-center transition-colors"
-            >
-              <X className="w-4 h-4 text-white" />
-            </button>
-          </div>
-
-          <div className="p-6">
-            {/* Card Preview */}
-            <div className="bg-gradient-to-br from-gray-800 to-gray-900 rounded-2xl p-6 mb-6 text-white relative overflow-hidden">
-              <div className="absolute top-0 right-0 w-32 h-32 bg-purple-500/20 rounded-full blur-3xl" />
-              <div className="relative">
-                <div className="flex items-center justify-between mb-8">
-                  <span className="text-xs font-medium text-gray-400">
-                    PORTION x402
-                  </span>
-                  <Wallet className="w-6 h-6 text-purple-400" />
-                </div>
-                <p className="text-2xl font-mono tracking-wider mb-4">
-                  •••• •••• •••• 0402
-                </p>
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-[10px] text-gray-400">SPENDING LIMIT</p>
-                    <p className="text-sm font-bold">
-                      ${availableYield.toFixed(2)}
-                    </p>
-                  </div>
-                  <div>
-                    <p className="text-[10px] text-gray-400">SOURCE</p>
-                    <p className="text-sm font-bold">sUSDV Yield</p>
-                  </div>
-                </div>
-              </div>
-            </div>
-
-            {/* Features */}
-            <div className="space-y-3 mb-6">
-              <div className="flex items-start gap-3 p-3 bg-purple-50 rounded-xl">
-                <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-                  <Check className="w-4 h-4 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-purple-900">
-                    Yield-Backed Spending
-                  </p>
-                  <p className="text-xs text-purple-700">
-                    Only spends your earned yield, never principal
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 p-3 bg-purple-50 rounded-xl">
-                <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-                  <Check className="w-4 h-4 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-purple-900">
-                    x402 Protocol
-                  </p>
-                  <p className="text-xs text-purple-700">
-                    Instant payments for online services
-                  </p>
-                </div>
-              </div>
-              <div className="flex items-start gap-3 p-3 bg-purple-50 rounded-xl">
-                <div className="w-6 h-6 rounded-full bg-purple-100 flex items-center justify-center flex-shrink-0">
-                  <Check className="w-4 h-4 text-purple-600" />
-                </div>
-                <div>
-                  <p className="text-sm font-medium text-purple-900">
-                    Set Custom Limits
-                  </p>
-                  <p className="text-xs text-purple-700">
-                    Control how much can be spent
-                  </p>
-                </div>
-              </div>
-            </div>
-
-            {/* Limit Setter */}
-            <div className="mb-6">
-              <label className="text-xs font-medium text-gray-500 block mb-2">
-                Card Spending Limit (USD)
-              </label>
-              <input
-                type="number"
-                value={cardLimit}
-                onChange={(e) => setCardLimit(e.target.value)}
-                placeholder={availableYield.toFixed(2)}
-                className="w-full px-4 py-3 bg-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-purple-500/50"
-                max={availableYield}
-              />
-              <p className="text-xs text-gray-500 mt-2">
-                Max: ${availableYield.toFixed(2)} (your available yield)
-              </p>
-            </div>
-
-            <Button
-              className="w-full bg-purple-600 hover:bg-purple-700"
-              disabled={availableYield <= 0}
-            >
-              {availableYield > 0
-                ? "Create x402 Pay Card"
-                : "Earn yield to create card"}
-            </Button>
-          </div>
-        </motion.div>
-      </motion.div>
-    </AnimatePresence>
-  );
-};

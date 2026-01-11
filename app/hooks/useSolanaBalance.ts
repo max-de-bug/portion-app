@@ -3,33 +3,20 @@
 import { useQuery } from "@tanstack/react-query";
 import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 
-// Reliable RPC endpoints that support CORS
-const RPC_ENDPOINTS: Record<string, string[]> = {
-  "mainnet-beta": [
-    "https://solana-mainnet.rpc.extrnode.com",
-    "https://rpc.ankr.com/solana",
-    "https://solana.public-rpc.com",
-  ],
-  devnet: [
-    "https://api.devnet.solana.com",
-    "https://rpc.ankr.com/solana_devnet",
-    "https://devnet.helius-rpc.com/?api-key=demo",
-    "https://solana-devnet.g.alchemy.com/v2/demo",
-  ],
-};
+import { getRpcEndpoints, SOLANA_NETWORKS, type SolanaNetwork } from "@/app/config/solana";
 
 /**
  * Fetch SOL balance with fallback RPC endpoints
  */
 async function fetchSolBalance(
   address: string,
-  network: "mainnet-beta" | "devnet"
+  network: SolanaNetwork
 ): Promise<number> {
   if (!address || address.startsWith("0x")) {
     throw new Error("Invalid Solana address");
   }
 
-  const endpoints = RPC_ENDPOINTS[network] || RPC_ENDPOINTS["mainnet-beta"];
+  const endpoints = getRpcEndpoints(network);
   const publicKey = new PublicKey(address);
 
   console.log(
@@ -80,7 +67,7 @@ async function fetchSolBalance(
  */
 export function useSolanaBalance(
   address: string | undefined,
-  network: "mainnet-beta" | "devnet" = "mainnet-beta"
+  network: SolanaNetwork = SOLANA_NETWORKS.MAINNET
 ) {
   // Validate address format (Solana addresses are base58, typically 32-44 chars)
   const isValidAddress =
