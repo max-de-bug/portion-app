@@ -125,6 +125,10 @@ export async function getYieldInfo(walletAddress: string): Promise<YieldInfo> {
     return result;
   } catch (error) {
     console.error("Failed to get yield info:", error);
+    // Try to return stale cache if available
+    const cached = yieldCache.get(walletAddress);
+    if (cached) return cached.data;
+
     return {
       walletAddress,
       usdvBalance: 0,
@@ -139,6 +143,16 @@ export async function getYieldInfo(walletAddress: string): Promise<YieldInfo> {
       lastUpdated: new Date(),
     };
   }
+}
+
+/**
+ * Get cached yield info only (no RPC)
+ */
+export function getCachedYieldInfo(walletAddress: string): YieldInfo | null {
+  const cached = yieldCache.get(walletAddress);
+  // Return cache even if slightly expired to avoid blocking UI
+  if (cached) return cached.data;
+  return null;
 }
 
 /**

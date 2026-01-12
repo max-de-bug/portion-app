@@ -12,7 +12,7 @@ interface NetworkContextType {
 const NetworkContext = createContext<NetworkContextType | undefined>(undefined);
 
 export function NetworkProvider({ children }: { children: React.ReactNode }) {
-  const [network, setNetwork] = useState<Network>("mainnet-beta");
+  const [network, setNetwork] = useState<Network>("devnet");
 
   // Optional: Persist network selection
   useEffect(() => {

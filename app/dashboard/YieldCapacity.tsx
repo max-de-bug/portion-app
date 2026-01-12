@@ -50,7 +50,7 @@ export function YieldCapacity({ walletAddress }: YieldCapacityProps) {
             <div className="w-8 h-8 rounded-lg bg-accent flex items-center justify-center flex-shrink-0">
               <Zap className="w-4 h-4 text-primary" />
             </div>
-            <h3 className="font-semibold text-foreground truncate">YaaS Yield Capacity</h3>
+            <h3 className="font-semibold text-foreground truncate">YaaS Yield Earnings</h3>
           </div>
           <span
             className={cn(
@@ -60,15 +60,15 @@ export function YieldCapacity({ walletAddress }: YieldCapacityProps) {
                 : "bg-accent text-primary"
             )}
           >
-            {isFullyUtilized ? "100%" : `${allocationPercent.toFixed(0)}%`}
+            {isFullyUtilized ? "100%" : `${allocationPercent.toFixed(2)}%`}
           </span>
         </div>
 
         {/* Allocation Progress */}
         <div>
           <div className="flex justify-between text-xs mb-2 font-medium">
-            <span className="text-muted-foreground">Allocated for Payments</span>
-            <span className="text-primary font-bold">{allocationPercent.toFixed(0)}%</span>
+            <span className="text-muted-foreground">Daily Budget Used (${dailySpent.toFixed(3)} / ${dailyLimit})</span>
+            <span className="text-primary font-bold">{allocationPercent.toFixed(2)}%</span>
           </div>
           <div className="h-2.5 w-full bg-background/50 rounded-full overflow-hidden border border-border/20">
             <div
@@ -87,25 +87,25 @@ export function YieldCapacity({ walletAddress }: YieldCapacityProps) {
         <div className="grid grid-cols-2 gap-3">
           <div className="p-3 rounded-xl bg-background/40 border border-border/20 hover:scale-[1.02] transition-transform overflow-hidden">
             <span className="block text-[10px] uppercase font-bold text-muted-foreground mb-1 truncate">
-              Yield Source
+              Stream Status
             </span>
             <span className="text-xs font-bold text-foreground flex items-center gap-1.5 truncate">
               <div
                 className={cn(
                   "w-2 h-2 rounded-full flex-shrink-0",
-                  hasYieldSource ? "bg-primary animate-pulse" : "bg-muted-foreground"
+                  hasYieldSource ? "bg-success animate-pulse" : "bg-muted-foreground"
                 )}
               />
-              <span className="truncate">{hasYieldSource ? "Solomon YaaS" : "Not Connected"}</span>
+              <span className="truncate">{hasYieldSource ? "Active (USDv)" : "Inactive"}</span>
             </span>
           </div>
           <div className="p-3 rounded-xl bg-background/40 border border-border/20 hover:scale-[1.02] transition-transform overflow-hidden">
             <span className="block text-[10px] uppercase font-bold text-muted-foreground mb-1 truncate">
-              Efficiency
+              Liquidity
             </span>
             <span className="text-xs font-mono font-bold text-primary flex items-center gap-1">
               <TrendingUp className="w-3 h-3 flex-shrink-0" />
-              {efficiency}%
+              100%
             </span>
           </div>
         </div>

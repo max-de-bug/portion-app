@@ -59,8 +59,8 @@ export const AI_SERVICES: AIService[] = [
   {
     id: "web-search",
     name: "Web Search",
-    pricePerCall: 0.005,
-    platformFee: 0.001,
+    pricePerCall: 0,
+    platformFee: 0,
     description: "Real-time web search and data extraction.",
     icon: Globe,
     category: "search",

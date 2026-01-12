@@ -172,7 +172,7 @@ The app runs in demo mode on devnet, providing simulated yield for testing.
 | `/x402/yield/:wallet`    | GET    | Get spendable yield          |
 | `/x402/history/:wallet`  | GET    | Payment history              |
 
-### Frontend API Routes
+### Frontend API Routes(Demo)
 
 | Route                | Description           |
 | -------------------- | --------------------- |

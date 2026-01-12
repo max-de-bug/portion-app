@@ -10,9 +10,8 @@ import {
   ArrowUpFromLine,
   ExternalLink,
   AlertCircle,
-  QrCode,
-  Wallet,
 } from "lucide-react";
+import QRCode from "react-qr-code";
 import { Button } from "@/components/ui/button";
 
 // ============================================
@@ -75,10 +74,21 @@ export const ReceiveModal = ({
           </div>
 
           <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
-            {/* QR Code Placeholder */}
+            {/* QR Code */}
             <div className="bg-gray-100 rounded-2xl p-8 mb-6 flex flex-col items-center">
-              <div className="w-40 h-40 bg-white rounded-xl flex items-center justify-center border-2 border-dashed border-gray-300 mb-4">
-                <QrCode className="w-20 h-20 text-gray-400" />
+              <div className="w-48 h-48 bg-white rounded-xl flex items-center justify-center border border-gray-200 mb-4 p-4 shadow-sm">
+                {walletAddress ? (
+                  <QRCode
+                    value={walletAddress}
+                    size={256}
+                    style={{ height: "auto", maxWidth: "100%", width: "100%" }}
+                    viewBox={`0 0 256 256`}
+                  />
+                ) : (
+                  <div className="text-xs text-gray-400 text-center">
+                    Connect wallet to view QR
+                  </div>
+                )}
               </div>
               <p className="text-xs text-gray-500">
                 Scan to receive sUSDV or USDV
@@ -139,24 +149,29 @@ export const ReceiveModal = ({
 // ============================================
 // WITHDRAW MODAL - Withdraw yield to wallet
 // ============================================
-interface WithdrawModalProps {
+// ============================================
+// UNSTAKE MODAL - Unstake sUSDv to USDv
+// ============================================
+interface UnstakeModalProps {
   isOpen: boolean;
   onClose: () => void;
-  availableYield: number;
+  availableYield: number; // This acts as sUSDv balance in this context
   walletAddress: string;
 }
 
 export const WithdrawModal = ({
   isOpen,
   onClose,
-  availableYield,
+  availableYield: sUSDvBalance,
   walletAddress,
-}: WithdrawModalProps) => {
+}: UnstakeModalProps) => {
   const [amount, setAmount] = useState("");
-  const [destination, setDestination] = useState("same"); // "same" | "other"
-  const [customAddress, setCustomAddress] = useState("");
+  
+  // Exchange rate: 1 sUSDv = 1.05 USDv (Simulated appreciation)
+  const exchangeRate = 1.05;
+  const estimatedOutput = amount ? parseFloat(amount) * exchangeRate : 0;
 
-  const maxAmount = availableYield;
+  const maxAmount = sUSDvBalance;
   const isValidAmount =
     parseFloat(amount) > 0 && parseFloat(amount) <= maxAmount;
 
@@ -185,8 +200,8 @@ export const WithdrawModal = ({
                 <ArrowUpFromLine className="w-6 h-6 text-white" />
               </div>
               <div>
-                <h2 className="font-bold text-white">Withdraw Yield</h2>
-                <p className="text-orange-100 text-xs">Convert to USDV</p>
+                <h2 className="font-bold text-white">Unstake sUSDv</h2>
+                <p className="text-orange-100 text-xs">Redeem for USDv</p>
               </div>
             </div>
             <button
@@ -198,102 +213,83 @@ export const WithdrawModal = ({
           </div>
 
           <div className="p-6 overflow-y-auto flex-1 custom-scrollbar">
+            {/* Liquidity Note */}
+            <div className="bg-blue-50 border border-blue-200 rounded-xl p-3 mb-6 flex gap-3">
+               <AlertCircle className="w-5 h-5 text-blue-500 flex-shrink-0" />
+               <div className="text-xs text-blue-700">
+                 <strong>YaaS User?</strong> You don't need to unstake!
+                 <br />
+                 If you hold <strong>USDv</strong>, you are already liquid and earning YaaS yield automatically.
+               </div>
+            </div>
+
             {/* Available Balance */}
-            <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-6">
-              <p className="text-xs text-orange-600 font-medium">
-                Available to Withdraw
+            <div className="bg-gray-50 border border-gray-200 rounded-xl p-4 mb-6">
+              <p className="text-xs text-gray-500 font-medium">
+                Staked Balance (sUSDv)
               </p>
-              <p className="text-2xl font-bold text-orange-800 break-all">
-                ${maxAmount.toFixed(2)}
+              <p className="text-2xl font-bold text-gray-800 break-all">
+                {maxAmount.toFixed(4)} sUSDv
               </p>
-              <p className="text-xs text-orange-600">
-                Principal stays protected ✓
+              <p className="text-xs text-green-600">
+                ≈ ${(maxAmount * exchangeRate).toFixed(2)} USD value
               </p>
             </div>
 
             {/* Amount Input */}
             <div className="mb-4">
               <label className="text-xs font-medium text-gray-500 block mb-2">
-                Amount (USD)
+                Amount to Unstake (sUSDv)
               </label>
               <div className="relative">
-                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-400">
-                  $
-                </span>
                 <input
                   type="number"
                   value={amount}
                   onChange={(e) => setAmount(e.target.value)}
                   placeholder="0.00"
-                  className="w-full pl-8 pr-16 py-3 bg-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/50"
+                  className="w-full pl-4 pr-16 py-3 bg-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/50"
                   max={maxAmount}
                   step="0.01"
                 />
                 <button
                   onClick={() => setAmount(maxAmount.toString())}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-orange-600 hover:text-orange-700"
+                  className="absolute right-3 top-1/2 -translate-y-1/2 text-xs font-medium text-orange-600 hover:text-orange-700 bg-white px-2 py-1 rounded shadow-sm"
                 >
                   MAX
                 </button>
               </div>
             </div>
 
-            {/* Destination */}
-            <div className="mb-6">
-              <label className="text-xs font-medium text-gray-500 block mb-2">
-                Withdraw To
-              </label>
-              <div className="flex flex-col sm:flex-row gap-2 mb-3">
-                <button
-                  onClick={() => setDestination("same")}
-                  className={`flex-1 p-3 rounded-xl text-sm font-medium transition-colors ${
-                    destination === "same"
-                      ? "bg-orange-100 text-orange-700 border-2 border-orange-500"
-                      : "bg-gray-100 text-gray-600 border-2 border-transparent"
-                  }`}
-                >
-                  Same Wallet
-                </button>
-                <button
-                  onClick={() => setDestination("other")}
-                  className={`flex-1 p-3 rounded-xl text-sm font-medium transition-colors ${
-                    destination === "other"
-                      ? "bg-orange-100 text-orange-700 border-2 border-orange-500"
-                      : "bg-gray-100 text-gray-600 border-2 border-transparent"
-                  }`}
-                >
-                  Other Address
-                </button>
-              </div>
-              {destination === "other" && (
-                <input
-                  type="text"
-                  value={customAddress}
-                  onChange={(e) => setCustomAddress(e.target.value)}
-                  placeholder="Solana address (e.g., 7xKX...)"
-                  className="w-full px-4 py-3 bg-gray-100 rounded-xl focus:outline-none focus:ring-2 focus:ring-orange-500/50 text-sm"
-                />
-              )}
+            {/* Estimate Output */}
+            <div className="mb-6 flex items-center justify-between text-sm px-1">
+               <span className="text-gray-500">You Receive (Approx.)</span>
+               <span className="font-bold text-gray-800">{estimatedOutput.toFixed(2)} USDv</span>
             </div>
 
-            {/* Warning */}
-            {maxAmount <= 0 && (
-              <div className="bg-red-50 border border-red-200 rounded-xl p-4 mb-6 flex gap-3">
-                <AlertCircle className="w-5 h-5 text-red-500 flex-shrink-0" />
-                <p className="text-xs text-red-700">
-                  No yield available to withdraw. Stake sUSDV to start earning
-                  yield.
+            {/* Cooldown Warning */}
+            <div className="bg-orange-50 border border-orange-200 rounded-xl p-4 mb-6 flex gap-3">
+              <AlertCircle className="w-5 h-5 text-orange-500 flex-shrink-0" />
+              <div>
+                <p className="text-xs font-bold text-orange-800 mb-1">
+                  7-Day Cooldown Period
+                </p>
+                <p className="text-[11px] text-orange-700 leading-tight">
+                  Unstaking initiates a 7-day cooldown. You will be able to withdraw your USDv + Yield after this period.
                 </p>
               </div>
-            )}
+            </div>
 
             <Button
-              variant="success"
-              className="w-full"
+              variant="destructive"
+              className="w-full bg-orange-600 hover:bg-orange-700 text-white"
               disabled={!isValidAmount || maxAmount <= 0}
             >
-              Withdraw ${amount || "0.00"}
+              Initiate Unstake ({amount ? `${amount} sUSDv` : "0.00"})
             </Button>
+            
+            <p className="text-[10px] text-center text-gray-400 mt-3">
+               This is a blockchain transaction. Network fees apply.
+            </p>
           </div>
         </motion.div>
       </motion.div>

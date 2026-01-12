@@ -28,7 +28,7 @@ const DEFAULT_POLICIES: SpendingPolicy[] = [
     name: "Daily Spending Limit",
     type: "daily_limit",
     enabled: true,
-    value: 500,
+    value: 50,
     maxValue: 1000,
     status: "active",
   },
@@ -73,6 +73,12 @@ export function useSpendingPolicies() {
         const { setYield } = useYieldStore.getState();
         if (data.dailySpent) {
           useYieldStore.getState().recordSpending(data.dailySpent - useYieldStore.getState().dailySpent);
+        }
+        
+        // MIGRATION: Force update 500 (old default) to 50 (new default) for better UX
+        const dailyLimitPolicy = data.policies.find(p => p.id === "daily_limit");
+        if (dailyLimitPolicy && dailyLimitPolicy.value === 500) {
+           setPolicies(prev => prev.map(p => p.id === "daily_limit" ? { ...p, value: 50 } : p));
         }
       }
     } catch {

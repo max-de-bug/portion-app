@@ -35,5 +35,5 @@ export const SOLANA_RPC_CONFIG = {
  * Gets the prioritized list of RPC endpoints for a given network
  */
 export function getRpcEndpoints(network: SolanaNetwork): string[] {
-  return SOLANA_RPC_CONFIG[network] || SOLANA_RPC_CONFIG[SOLANA_NETWORKS.MAINNET];
+  return SOLANA_RPC_CONFIG[network] || SOLANA_RPC_CONFIG[SOLANA_NETWORKS.DEVNET];
 }

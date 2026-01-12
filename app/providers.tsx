@@ -23,8 +23,9 @@ export default function Providers({ children }: { children: React.ReactNode }) {
     }
     try {
       // Create connectors with proper configuration for Solflare compatibility
+      // Create connectors with proper configuration
       return toSolanaWalletConnectors({
-        shouldAutoConnect: false, // Disable auto-connect to prevent conflicts
+        shouldAutoConnect: true, // Enable auto-connect to ensure wallets are available for signing
       });
     } catch (error) {
       console.error("[Providers] Error creating Solana connectors:", error);

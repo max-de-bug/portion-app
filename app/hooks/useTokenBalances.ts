@@ -60,7 +60,7 @@ const DEFAULT_BALANCE_DATA: BalanceData = {
  */
 export function useTokenBalances({
   walletAddress,
-  network = "mainnet-beta",
+  network = "devnet",
   refreshInterval = 15000,
   enabled = true,
 }: UseTokenBalancesOptions = {}) {

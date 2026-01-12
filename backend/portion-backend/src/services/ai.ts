@@ -1,5 +1,6 @@
 import "dotenv/config";
 import { getSpendableYield } from "./yield";
+import { createTransferTransaction } from "./solana";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 
@@ -103,7 +104,7 @@ export async function executeAIService(
   // Simulation Logic (Fallback or Default)
   await new Promise((r) => setTimeout(r, 800)); // Simulate thinking
 
-  const responses: Record<string, () => AIResponse> = {
+  const responses: Record<string, () => Promise<AIResponse> | AIResponse> = {
     "gpt-4": () => ({
       model: "gpt-4",
       content: `[GPT-4 Response${isSubscription ? " (Sub)" : ""}]\n\nBased on your query: "${input.slice(0, 100)}${input.length > 100 ? "..." : ""}"\n\nThis is a simulated response for beta testing. In production, this would connect to OpenAI's API.${personaSuffix}\n💰 Remaining Yield: $${remainingBalance.toFixed(4)}`,
@@ -131,15 +132,102 @@ export async function executeAIService(
       remainingBalance,
       isSimulated: true,
     }),
-    "web-search": () => ({
-      model: "web-search",
-      results: [
-        { title: "Solomon Labs Documentation", url: "https://docs.solomonlabs.org" },
-        { title: "x402 Protocol Specification", url: "https://github.com/coinbase/x402" }
-      ],
-      remainingBalance,
-      isSimulated: true,
-    }),
+    "web-search": async () => {
+      // COMMERCE SIMULATION LOGIC & REAL TX PROPOSAL
+      const lowerInput = input.toLowerCase();
+      
+      // Intent detection: look for purchase actions
+      // We keep exclusions to avoid triggering on "how to buy" or "what is a purchase"
+      const coreAction = ["buy", "purchase", "order", "checkout", "give me", "get", "want", "need"].some(k => lowerInput.includes(k));
+      const directAction = ["get this", "pay for", "send me"].some(k => lowerInput.includes(k));
+      const isFaucetRequest = lowerInput.includes("faucet") || ((lowerInput.includes("give me") || lowerInput.includes("get") || lowerInput.includes("send me") || lowerInput.includes("need")) && lowerInput.includes("usdv"));
+      
+      const isCommerce = (coreAction || directAction) && 
+                         !lowerInput.includes("how to") && 
+                         !lowerInput.includes("where can i") &&
+                         !lowerInput.includes("what is") &&
+                         !lowerInput.includes("who is") &&
+                         !isFaucetRequest;
+
+      if (isFaucetRequest) {
+        console.log(`[AI Service] Faucet request DETECTED for input: "${input}"`);
+        return {
+          model: "web-search",
+          content: `Of course! I'm initiating a transfer of **10.00 USDV** to your wallet for testing purposes. One moment...`,
+          results: [{
+            type: "faucet_request",
+            currency: "USDV",
+            amount: 10
+          }],
+          remainingBalance
+        };
+      }
+      
+      if (isCommerce) {
+        console.log(`[AI Service] Commerce intent DETECTED for input: "${input}"`);
+        const itemMatch = input.match(/(?:buy|purchase|order|get me|pay for|send me)\s+(?:a|an|some|the)?\s*([^.,!]+)/i);
+        let item = itemMatch ? itemMatch[1].trim() : "Item";
+        
+        // Detect currency preference
+        const currencyMatch = lowerInput.match(/\b(sol|usdv|usdc)\b/i);
+        const currency = currencyMatch ? currencyMatch[1].toUpperCase() : "SOL";
+        
+        // Capitalize for professional feel
+        item = item.charAt(0).toUpperCase() + item.slice(1);
+        
+        // Price estimation (scaled for the currency)
+        const baseAmount = Math.random() * 0.05;
+        const estimatedPrice = currency === "SOL" ? baseAmount.toFixed(4) : (baseAmount * 100).toFixed(2);
+        
+        const VENDOR_ADDRESS = "PoRTn1WzKQVfBPGjC7LU1RVrS6NkYSkKuSWLKsmDorP"; // Example treasury
+        
+        try {
+           const { TOKEN_MINTS } = await import("./solana.js");
+           const mint = currency === "USDV" ? TOKEN_MINTS.USDV : 
+                        currency === "USDC" ? TOKEN_MINTS.USDC : 
+                        undefined;
+
+           // Create UN-SIGNED transaction for user to sign
+           const { transaction } = await createTransferTransaction(
+             walletAddress, 
+             VENDOR_ADDRESS, 
+             parseFloat(estimatedPrice),
+             mint
+           );
+
+           return {
+              model: "web-search",
+              content: `### 🛍️ Digital Proposal\n\nI successfully located **${item}** for you. Here are the purchase details:\n\n**Order Summary:**\n- **Product:** ${item}\n- **Price:** ${estimatedPrice} ${currency}\n- **Recipient:** \`${VENDOR_ADDRESS.slice(0, 4)}...${VENDOR_ADDRESS.slice(-4)}\`\n\nTo proceed, please authorize the transaction in your connected Solana wallet.`,
+              results: [{
+                 type: "transaction_proposal",
+                 transaction: transaction,
+                 currency: currency,
+                 message: `Sign to purchase ${item} for ${estimatedPrice} ${currency}`
+              }],
+              remainingBalance,
+           };
+        } catch (error: any) {
+           console.error("Tx Creation failed:", error);
+           return {
+              model: "web-search",
+              content: `[Solana Commerce] Failed to generate transaction.\n\nError: ${error.message}\n\nPlease check your wallet address and try again.`,
+              remainingBalance,
+              isSimulated: true
+           };
+        }
+      }
+
+      return {
+        model: "web-search",
+        results: [
+          { title: "Solomon Labs Documentation", url: "https://docs.solomonlabs.org" },
+          { title: "x402 Protocol Specification", url: "https://github.com/coinbase/x402" }
+        ],
+        content: `[Web Search] Real-time search is active (Free Tier).\n\nFound results for: "${input}"\n\n1. [Solomon Labs Documentation](https://docs.solomonlabs.org)\n2. [x402 Protocol Specification](https://github.com/coinbase/x402)\n\nLet me know if you need to buy something!`,
+        remainingBalance,
+        isSimulated: true,
+      };
+    },
   };
 
   const handler = responses[service];

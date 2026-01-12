@@ -1,6 +1,6 @@
 import { FastifyPluginAsync } from "fastify";
 import { PublicKey } from "@solana/web3.js";
-import { getSpendableYield } from "../../services/yield";
+import { getSpendableYield, getCachedYieldInfo } from "../../services/yield";
 import { executeAIService } from "../../services/ai";
 
 /**
@@ -60,7 +60,7 @@ const SERVICE_PRICING: Record<string, { price: number; platformFee: number; desc
     "claude-3": { price: 0.025, platformFee: 0.004, description: "Claude 3 Sonnet completion" },
     "dall-e-3": { price: 0.04, platformFee: 0.008, description: "DALL-E 3 image generation" },
     "whisper": { price: 0.006, platformFee: 0.001, description: "Whisper audio transcription" },
-    "web-search": { price: 0.005, platformFee: 0.001, description: "Web search" },
+    "web-search": { price: 0, platformFee: 0, description: "Web search" },
   };
 
 // In-memory stores (use Redis in production)
@@ -130,7 +130,20 @@ const x402Plugin: FastifyPluginAsync = async (fastify): Promise<void> => {
     }
 
     // Check user's spendable yield
-    const spendableYield = await getSpendableYield(walletAddress);
+    // OPTIMIZATION: Try to use cached info first to avoid RPC 429s during chat interactions
+    const cachedInfo = getCachedYieldInfo(walletAddress);
+    let spendableYield = 0;
+
+    if (cachedInfo) {
+      // Calculate spendable from cache
+      // Note: We need to subtract allocated amount, but for speed we might skip it or 
+      // ideally we should move `allocations` map export to be accessible or move getSpendableYield logic
+      // For now, we'll re-use getSpendableYield but reliance on `services/yield.ts` internal caching helps
+      spendableYield = await getSpendableYield(walletAddress);
+    } else {
+      // If no cache, we might triggered a fresh fetch which is circuit-broken if needed
+      spendableYield = await getSpendableYield(walletAddress);
+    }
 
     if (spendableYield < serviceInfo.price) {
       return reply.status(402).send({
@@ -337,6 +350,41 @@ const x402Plugin: FastifyPluginAsync = async (fastify): Promise<void> => {
       payments: history,
       total: history.reduce((sum, p) => sum + p.amount, 0),
     });
+  });
+
+  /**
+   * POST /x402/faucet
+   * Request mock USDV or SOL for testing
+   */
+  fastify.post<{
+    Body: { walletAddress: string; amount?: number; currency?: string };
+  }>("/faucet", async (request, reply) => {
+    const { walletAddress, amount = 10, currency = "USDV" } = request.body;
+    
+    try {
+      const { sendTokensFromTreasury, TOKEN_MINTS } = await import("../../services/solana.js");
+      
+      const mint = currency === "USDV" ? TOKEN_MINTS.USDV : 
+                   currency === "USDC" ? TOKEN_MINTS.USDC : 
+                   undefined; // undefined means SOL
+
+      console.log(`[Faucet] Sending ${amount} ${currency} to ${walletAddress}`);
+      
+      const signature = await sendTokensFromTreasury(walletAddress, amount, mint);
+      
+      return reply.send({
+        success: true,
+        signature,
+        message: `Successfully sent ${amount} ${currency} to ${walletAddress}`,
+        explorerUrl: `https://solscan.io/tx/${signature}?cluster=devnet`
+      });
+    } catch (error) {
+      console.error("[Faucet Error]", error);
+      return reply.status(500).send({
+        error: "Faucet failed",
+        message: error instanceof Error ? error.message : "Wait for airdrop quota or check treasury"
+      });
+    }
   });
 };
 

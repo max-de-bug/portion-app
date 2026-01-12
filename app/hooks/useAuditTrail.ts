@@ -1,55 +1,26 @@
 "use client";
 
-import { useState, useCallback, useEffect } from "react";
+import { useCallback, useEffect, useState } from "react";
+import { useAuditStore, AuditEvent } from "@/app/store/useAuditStore";
 
-/**
- * Audit event types for tracking policy and transaction activity
- */
-export interface AuditEvent {
-  id: string;
-  action: string;
-  detail: string;
-  timestamp: number;
-  time: string;
-  status: "success" | "error" | "info";
-  category: "policy" | "transaction" | "wallet" | "merchant" | "system";
-}
-
-const STORAGE_KEY = "portion_audit_trail";
 const MAX_EVENTS = 100;
 const RETENTION_DAYS = 7;
 
+export type { AuditEvent };
+
 /**
  * Hook to manage audit trail for compliance and activity tracking
- * Persists to localStorage with automatic cleanup of old events
+ * Wraps the persistent useAuditStore
  */
 export function useAuditTrail() {
-  const [events, setEvents] = useState<AuditEvent[]>([]);
+  const { events, addEvent: storeAddEvent, clearEvents, pruneEvents } = useAuditStore();
   const [isLoading, setIsLoading] = useState(true);
 
-  // Load from localStorage on mount
+  // Initial prune on mount (client-side only to match hydration)
   useEffect(() => {
-    try {
-      const stored = localStorage.getItem(STORAGE_KEY);
-      if (stored) {
-        const data: AuditEvent[] = JSON.parse(stored);
-        // Filter out events older than retention period
-        const cutoff = Date.now() - RETENTION_DAYS * 24 * 60 * 60 * 1000;
-        const recentEvents = data.filter((e) => e.timestamp > cutoff);
-        setEvents(recentEvents);
-      }
-    } catch {
-      // Use empty array on error
-    }
+    pruneEvents(MAX_EVENTS, RETENTION_DAYS * 24 * 60 * 60 * 1000);
     setIsLoading(false);
-  }, []);
-
-  // Persist to localStorage on change
-  useEffect(() => {
-    if (!isLoading) {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(events));
-    }
-  }, [events, isLoading]);
+  }, [pruneEvents]);
 
   const formatTimeAgo = useCallback((timestamp: number): string => {
     const seconds = Math.floor((Date.now() - timestamp) / 1000);
@@ -67,11 +38,11 @@ export function useAuditTrail() {
         timestamp: Date.now(),
         time: "Just now",
       };
-
-      setEvents((prev) => [newEvent, ...prev].slice(0, MAX_EVENTS));
+      // Optimistically update local view if needed, but store handles it
+      storeAddEvent(newEvent);
       return newEvent;
     },
-    []
+    [storeAddEvent]
   );
 
   // Convenience methods for common audit events
@@ -136,13 +107,10 @@ export function useAuditTrail() {
     [addEvent]
   );
 
-  const clearEvents = useCallback(() => {
-    setEvents([]);
-  }, []);
-
   const getRecentEvents = useCallback(
     (limit = 6) => {
-      // Update time strings before returning
+      // Return events with processed time string
+      // Note: We create new objects to avoid mutating store state with volatile "time" strings
       return events.slice(0, limit).map((e) => ({
         ...e,
         time: formatTimeAgo(e.timestamp),
@@ -163,7 +131,7 @@ export function useAuditTrail() {
 
   return {
     events,
-    isLoading,
+    isLoading, // Kept for API compatibility, though store is instant
     addEvent,
     logPolicyUpdate,
     logTransactionApproved,

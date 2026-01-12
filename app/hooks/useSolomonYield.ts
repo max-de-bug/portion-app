@@ -51,7 +51,7 @@ async function fetchYieldData(wallet: string, demo = false): Promise<YieldData> 
     // Fastify returns { ...yieldInfo, spendable }
     return {
       wallet,
-      network: "mainnet-beta",
+      network: "devnet",
       usdvBalance: data.usdvBalance || 0,
       susdvBalance: data.susdvBalance || 0,
       exchangeRate: data.exchangeRate || 1,
