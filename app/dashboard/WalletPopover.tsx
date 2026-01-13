@@ -80,8 +80,8 @@ export const WalletPopover = () => {
         onClick={toggleOpen}
         className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-[#fdfbf7] border border-[#e5e7eb] hover:bg-[#f3f4f6] transition-colors shadow-sm"
       >
-        <div className="w-5 h-5 rounded-full bg-gradient-to-br from-[#8ba1f5] to-[#c084fc] flex items-center justify-center">
-          <span className="text-[8px] font-bold text-white">👻</span>
+        <div className="w-5 h-5 rounded-full overflow-hidden flex items-center justify-center">
+          <img src="/samurai-jack.png" alt="Avatar" className="w-full h-full object-cover" />
         </div>
         <span className="text-sm font-medium text-gray-700">
           {shortenedAddress}
@@ -116,8 +116,8 @@ export const WalletPopover = () => {
                   className="flex items-center gap-2 mb-6 p-2 group cursor-pointer"
                   onClick={handleCopy}
                 >
-                  <div className="w-8 h-8 rounded-xl bg-[#a78bfa] flex items-center justify-center text-white">
-                    👻
+                  <div className="w-8 h-8 rounded-xl overflow-hidden flex items-center justify-center">
+                    <img src="/samurai-jack.png" alt="Avatar" className="w-full h-full object-cover" />
                   </div>
                   <span className="font-bold text-lg text-gray-800">
                     {shortenedAddress}

@@ -432,10 +432,11 @@ export function useAgentChat(walletAddress: string) {
       // SENIOR FIX: Freshly fetch blockhash on the frontend to ensure network alignment
       // This solves the "Network mismatch" if the backend accidentally provided a blockhash from another cluster.
       const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
-      const { blockhash } = await connection.getLatestBlockhash();
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
       
       console.log("[useAgentChat] Overriding blockhash for network alignment:", blockhash);
       transaction.recentBlockhash = blockhash;
+      transaction.lastValidBlockHeight = lastValidBlockHeight;
 
       const { signature } = await signAndSendTransaction({
         transaction: transaction.serialize({
@@ -445,13 +446,14 @@ export function useAgentChat(walletAddress: string) {
         wallet
       });
 
-      // Format signature properly
-      // If it's an array/Uint8Array, we need to convert to Base58 for Solana
+      // SENIOR FIX: Robust signature conversion to Base58
+      // Solana signatures from Privy/SignAndSend can come in various formats
       let sigString = "";
       if (typeof signature === 'string') {
         sigString = signature;
-      } else {
-        // Base58 Encode for Solana signatures
+      } else if (signature instanceof Uint8Array || Array.isArray(signature)) {
+        // Base58 Encode for Solana signatures using a more robust utility if available, 
+        // or this manual implementation which is standard for Solana web3 apps.
         const ALPHABET = '123456789ABCDEFGHJKLMNPQRSTUVWXYZabcdefghijkmnopqrstuvwxyz';
         const bytes = Array.from(signature as any) as number[];
         let digits: number[] = [0];
@@ -471,6 +473,9 @@ export function useAgentChat(walletAddress: string) {
         }
         for (let i = 0; bytes[i] === 0 && i < bytes.length - 1; i++) digits.push(0);
         sigString = digits.reverse().map(digit => ALPHABET[digit]).join('');
+      } else {
+        // Fallback for unexpected types
+        sigString = String(signature);
       }
 
       const truncatedSig = sigString.length > 20 ? `${sigString.slice(0, 10)}...${sigString.slice(-10)}` : sigString;

@@ -140,7 +140,16 @@ export async function executeAIService(
       // We keep exclusions to avoid triggering on "how to buy" or "what is a purchase"
       const coreAction = ["buy", "purchase", "order", "checkout", "give me", "get", "want", "need"].some(k => lowerInput.includes(k));
       const directAction = ["get this", "pay for", "send me"].some(k => lowerInput.includes(k));
-      const isFaucetRequest = lowerInput.includes("faucet") || ((lowerInput.includes("give me") || lowerInput.includes("get") || lowerInput.includes("send me") || lowerInput.includes("need")) && lowerInput.includes("usdv"));
+      
+      // SENIOR FIX: Better faucet detection including SOL and USDC
+      // Use word boundaries for "sol" to avoid matching symbols like "solution"
+      const hasSol = /\bsol\b/i.test(lowerInput);
+      const hasUsdv = /\busdv\b/i.test(lowerInput);
+      const hasUsdc = /\busdc\b/i.test(lowerInput);
+      
+      const isFaucetRequest = lowerInput.includes("faucet") || 
+                              ((lowerInput.includes("give me") || lowerInput.includes("get") || lowerInput.includes("send me") || lowerInput.includes("need") || lowerInput.includes("want")) && 
+                               (hasSol || hasUsdv || hasUsdc));
       
       const isCommerce = (coreAction || directAction) && 
                          !lowerInput.includes("how to") && 
@@ -151,13 +160,17 @@ export async function executeAIService(
 
       if (isFaucetRequest) {
         console.log(`[AI Service] Faucet request DETECTED for input: "${input}"`);
+        // Default to SOL if "sol" is mentioned, otherwise USDV
+        const requestedCurrency = hasSol ? "SOL" : (hasUsdc ? "USDC" : "USDV");
+        const amount = requestedCurrency === "SOL" ? 0.1 : 10;
+
         return {
           model: "web-search",
-          content: `Of course! I'm initiating a transfer of **10.00 USDV** to your wallet for testing purposes. One moment...`,
+          content: `Of course! I'm initiating a transfer of **${amount} ${requestedCurrency}** to your wallet for testing purposes. One moment...`,
           results: [{
             type: "faucet_request",
-            currency: "USDV",
-            amount: 10
+            currency: requestedCurrency,
+            amount: amount
           }],
           remainingBalance
         };
@@ -228,6 +241,8 @@ export async function executeAIService(
         isSimulated: true,
       };
     },
+    // Alias for the new frontend service name
+    "solana-agent": async () => responses["web-search"](),
   };
 
   const handler = responses[service];

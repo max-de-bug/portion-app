@@ -61,6 +61,7 @@ const SERVICE_PRICING: Record<string, { price: number; platformFee: number; desc
     "dall-e-3": { price: 0.04, platformFee: 0.008, description: "DALL-E 3 image generation" },
     "whisper": { price: 0.006, platformFee: 0.001, description: "Whisper audio transcription" },
     "web-search": { price: 0, platformFee: 0, description: "Web search" },
+    "solana-agent": { price: 0, platformFee: 0, description: "Solana transactions, purchases, and faucet" },
   };
 
 // In-memory stores (use Redis in production)

@@ -352,25 +352,27 @@ export const InteractiveHero = memo(function InteractiveHero() {
               animate={{ scale: isDetected || lightningPhase >= 1 ? 1.1 : 1 }}
               transition={{ type: "spring", stiffness: 300, damping: 20 }}
             >
-              <foreignObject x="-3" y="-3" width="6" height="6">
-                <div className="w-full h-full flex items-center justify-center">
-                  <motion.div
-                    className={`w-5 h-5 rounded-md flex items-center justify-center shadow-md transition-all duration-300 ${
-                      isDetected || lightningPhase >= 1 
-                        ? 'bg-gradient-to-br from-[#022c22] to-[#065f46] shadow-emerald-500/50' 
-                        : 'bg-emerald-100'
-                    }`}
-                    initial={{ filter: "none" }}
-                    animate={{ 
-                      filter: isDetected || lightningPhase >= 1 ? "drop-shadow(0 0 8px rgba(16,185,129,0.6))" : "none"
-                    }}
-                  >
-                    <span className={`font-serif text-xs font-bold italic leading-none pt-0.5 pr-px transition-colors duration-300 ${
-                      isDetected || lightningPhase >= 1 ? 'text-emerald-50' : 'text-emerald-400'
-                    }`}>P</span>
-                  </motion.div>
-                </div>
-              </foreignObject>
+              {/* Simple SVG P Logo */}
+              <motion.text
+                x="0"
+                y="0"
+                textAnchor="middle"
+                dominantBaseline="central"
+                fontSize="5"
+                fontWeight="bold"
+                fontStyle="italic"
+                fontFamily="Georgia, serif"
+                fill={isDetected || lightningPhase >= 1 ? "#10b981" : "#065f46"}
+                filter={isDetected || lightningPhase >= 1 ? "url(#glow)" : "none"}
+                initial={{ opacity: 0.8 }}
+                animate={{ 
+                  opacity: 1,
+                  fill: isDetected || lightningPhase >= 1 ? "#10b981" : "#065f46"
+                }}
+                transition={{ duration: 0.3 }}
+              >
+                P
+              </motion.text>
             </motion.g>
 
             <motion.text

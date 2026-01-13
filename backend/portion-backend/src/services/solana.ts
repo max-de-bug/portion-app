@@ -15,6 +15,8 @@ import {
   createTransferCheckedInstruction,
   getMint,
 } from "@solana/spl-token";
+import * as fs from "fs";
+import * as path from "path";
 
 // ... [rest of imports and RPC config]
 
@@ -380,6 +382,56 @@ export async function createTransferTransaction(
   };
 }
 
+// ============================================================================
+// TREASURY INITIALIZATION
+// ============================================================================
+
+// PERSISTENT TREASURY: Use module-level caching and local file storage.
+let cachedTreasury: Keypair | null = null;
+const KEY_PATH = path.join(process.cwd(), "treasury-key.json");
+
+function getTreasury(): Keypair {
+  if (cachedTreasury) return cachedTreasury;
+  
+  // 1. Try Environment Variable (Highest Priority)
+  if (process.env.TREASURY_SECRET_KEY) {
+    try {
+      const secret = Uint8Array.from(JSON.parse(process.env.TREASURY_SECRET_KEY));
+      cachedTreasury = Keypair.fromSecretKey(secret);
+      console.log(`[Solana Service] Treasury loaded from environment: ${cachedTreasury.publicKey.toBase58()}`);
+      return cachedTreasury;
+    } catch (err) {
+      console.error("[Solana Service] Failed to parse TREASURY_SECRET_KEY.", err);
+    }
+  }
+
+  // 2. Try Local File Storage (Persistence across restarts)
+  if (fs.existsSync(KEY_PATH)) {
+    try {
+      const secret = Uint8Array.from(JSON.parse(fs.readFileSync(KEY_PATH, "utf-8")));
+      cachedTreasury = Keypair.fromSecretKey(secret);
+      console.log(`[Solana Service] Treasury loaded from local file: ${cachedTreasury.publicKey.toBase58()}`);
+      return cachedTreasury;
+    } catch (err) {
+      console.error("[Solana Service] Failed to load treasury-key.json", err);
+    }
+  }
+  
+  // 3. Generate New Key (Last Resort)
+  cachedTreasury = Keypair.generate();
+  console.warn(`[Solana Service] Generated NEW temporary key: ${cachedTreasury.publicKey.toBase58()}`);
+  
+  try {
+    fs.writeFileSync(KEY_PATH, JSON.stringify(Array.from(cachedTreasury.secretKey)));
+    console.log(`[Solana Service] Saved new key to ${KEY_PATH} for persistence.`);
+  } catch (err) {
+    console.warn(`[Solana Service] Could not save key to file:`, err);
+  }
+
+  console.warn(`[Solana Service] !!! IMPORTANT: Please airdrop SOL to this address on devnet for the faucet to work.`);
+  return cachedTreasury;
+}
+
 /**
  * Sends tokens from the treasury wallet to a user (Faucet)
  * This is for mock/testing purposes on Devnet.
@@ -391,31 +443,54 @@ export async function sendTokensFromTreasury(
 ) {
   const connection = await getConnection();
   const to = new PublicKey(toWallet);
-  
-  // Use a mock treasury keypair for development
-  const TREASURY_SECRET = process.env.TREASURY_SECRET_KEY 
-    ? Uint8Array.from(JSON.parse(process.env.TREASURY_SECRET_KEY)) 
-    : Keypair.generate().secretKey;
-  
-  const treasury = Keypair.fromSecretKey(TREASURY_SECRET);
-  
-  // Best Practice: On Devnet, ensure treasury has enough SOL for the tx and ATA creation
-  if (NETWORK === "devnet") {
-    const balance = await connection.getBalance(treasury.publicKey);
-    if (balance < 0.05 * LAMPORTS_PER_SOL) {
-      console.log(`[Faucet] Treasury ${treasury.publicKey.toBase58()} is low on SOL. Requesting airdrop...`);
-      try {
-        const airdropSig = await connection.requestAirdrop(treasury.publicKey, 1 * LAMPORTS_PER_SOL);
-        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
-        await connection.confirmTransaction({ signature: airdropSig, blockhash, lastValidBlockHeight });
-      } catch (err) {
-        console.warn("[Faucet] Treasury airdrop failed, transaction might fail", err);
-      }
+
+  // SENIOR OPTIMIZATION: For native SOL on devnet, we can airdrop DIRECTLY to the user
+  // This avoids forcing the treasury to have a balance just to "pass through" SOL.
+  if (!tokenMint && NETWORK === "devnet") {
+    console.log(`[Faucet] Attempting direct SOL airdrop to ${toWallet}...`);
+    try {
+      const airdropSig = await connection.requestAirdrop(to, amount * LAMPORTS_PER_SOL);
+      const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+      await connection.confirmTransaction({ signature: airdropSig, blockhash, lastValidBlockHeight }, "confirmed");
+      console.log(`[Faucet] Direct SOL airdrop successful.`);
+      return airdropSig;
+    } catch (err) {
+      console.warn("[Faucet] Direct airdrop failed, falling back to treasury transfer...", err instanceof Error ? err.message : err);
+      // Fall through to treasury logic
     }
   }
 
-  const { blockhash } = await connection.getLatestBlockhash();
-  const transaction = new Transaction({ recentBlockhash: blockhash, feePayer: treasury.publicKey });
+  const treasury = getTreasury();
+  
+  // Best Practice: On Devnet, ensure treasury has enough SOL for the tx and ATA creation
+  if (NETWORK === "devnet") {
+    let balance = await connection.getBalance(treasury.publicKey);
+    // Increase threshold to 0.05 SOL to ensure we have enough for multiple transfers and fees
+    if (balance < 0.05 * LAMPORTS_PER_SOL) {
+      console.log(`[Faucet] Treasury ${treasury.publicKey.toBase58()} balance is ${balance / LAMPORTS_PER_SOL} SOL. Requesting airdrop...`);
+      try {
+        const airdropSig = await connection.requestAirdrop(treasury.publicKey, 1 * LAMPORTS_PER_SOL);
+        const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+        await connection.confirmTransaction({ signature: airdropSig, blockhash, lastValidBlockHeight }, "confirmed");
+        console.log(`[Faucet] Airdrop successful for treasury.`);
+        // Refresh balance after airdrop
+        balance = await connection.getBalance(treasury.publicKey);
+      } catch (err) {
+        console.warn("[Faucet] Treasury airdrop failed or rate limited.", err instanceof Error ? err.message : err);
+      }
+    }
+
+    // CRITICAL: If balance is still 0 after airdrop attempt, we MUST stop to avoid "Attempt to debit" error
+    if (balance === 0) {
+      throw new Error(`Treasury ${treasury.publicKey.toBase58()} has 0 SOL and airdrop failed. Please manually fuel it on devnet or wait for rate limit to reset.`);
+    }
+  }
+
+  const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
+  const transaction = new Transaction();
+  transaction.recentBlockhash = blockhash;
+  transaction.feePayer = treasury.publicKey;
+  transaction.lastValidBlockHeight = lastValidBlockHeight;
 
   if (!tokenMint) {
     // Native SOL airdrop
@@ -429,7 +504,7 @@ export async function sendTokensFromTreasury(
   } else {
     const mintPubkey = new PublicKey(tokenMint);
     
-    // Verify Mint exists (Best Practice: catch TokenAccountNotFoundError)
+    // Verify Mint exists
     let mintInfo;
     try {
       mintInfo = await getMint(connection, mintPubkey);
@@ -459,9 +534,7 @@ export async function sendTokensFromTreasury(
     // Ensure source ATA exists (Treasury needs to have tokens)
     const fromAtaInfo = await connection.getAccountInfo(fromAta);
     if (!fromAtaInfo) {
-      // In a real staging environment, we'd alert that treasury is empty.
-      // For a demo/devnet, we could throw a helpful error.
-      throw new Error(`Treasury ${treasury.publicKey.toBase58()} does not have an account for mint ${tokenMint}.`);
+      throw new Error(`Treasury ${treasury.publicKey.toBase58()} does not have an account for mint ${tokenMint}. For demo, please mint tokens to this account.`);
     }
 
     transaction.add(
@@ -476,6 +549,15 @@ export async function sendTokensFromTreasury(
     );
   }
 
-  const signature = await sendAndConfirmTransaction(connection, transaction, [treasury]);
-  return signature;
+  try {
+    const signature = await sendAndConfirmTransaction(connection, transaction, [treasury], {
+      commitment: "confirmed",
+      skipPreflight: false,
+    });
+    return signature;
+  } catch (err: any) {
+    console.error("[Faucet] Transaction failed:", err);
+    if (err.logs) console.error("[Faucet] Transaction Logs:", err.logs);
+    throw err;
+  }
 }
