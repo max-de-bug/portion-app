@@ -17,13 +17,25 @@ const app: FastifyPluginAsync<AppOptions> = async (
   // Enable CORS for frontend requests
   await fastify.register(cors, {
     origin: (origin, cb) => {
-      // Allow if there's no origin (e.g., local tools) 
-      // or if it matches localhost/127.0.0.1 for development
-      if (!origin || /localhost|127\.0\.0\.1|::1/.test(origin)) {
+      // Allow if there's no origin (e.g., local tools, server-to-server)
+      if (!origin) {
         cb(null, true);
         return;
       }
-      
+
+      // Allow localhost/127.0.0.1 for development
+      if (/localhost|127\.0\.0\.1|::1/.test(origin)) {
+        cb(null, true);
+        return;
+      }
+
+      // Allow Vercel deployments (preview and production)
+      if (/\.vercel\.app$/.test(origin)) {
+        cb(null, true);
+        return;
+      }
+
+      // Allow explicitly configured frontend URL
       const allowedOrigins = [
         process.env.FRONTEND_URL,
       ].filter(Boolean);
@@ -32,14 +44,15 @@ const app: FastifyPluginAsync<AppOptions> = async (
         cb(null, true);
         return;
       }
-      
-      // Still allow but log for debugging if needed
+
+      // In development, allow but log for debugging
       if (process.env.NODE_ENV === "development") {
         console.warn(`[CORS] Allowing origin despite mismatch: ${origin}`);
         cb(null, true);
         return;
       }
 
+      console.warn(`[CORS] Blocked origin: ${origin}`);
       cb(new Error("Not allowed by CORS"), false);
     },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
