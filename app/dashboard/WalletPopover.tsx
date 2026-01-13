@@ -233,10 +233,8 @@ export const WalletPopover = () => {
                     {/* SOL (Solana) - REAL TIME */}
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-3">
-                        <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center text-white border-2 border-white/10 shadow-sm overflow-hidden p-1.5">
-                          <svg viewBox="0 0 397 311" className="w-full h-full fill-white">
-                            <path d="M64.6 237.9c2.4 2.4 5.7 3.7 9.2 3.7h314.8c5.8 0 8.7-7 4.6-11.1l-64.6-64.6c-2.4-2.4-5.7-3.7-9.2-3.7H4.6c-5.8 0-8.7 7-4.6 11.1l64.6 64.6zm332.4-162c-2.4-2.4-5.7-3.7-9.2-3.7H73c-5.8 0-8.7 7-4.6 11.1l64.6 64.6c2.4 2.4 5.7 3.7 9.2 3.7h314.8c5.8 0 8.7-7 4.6-11.1l-64.6-64.6zM73 0c-3.5 0-6.8 1.3-9.2 3.7L-.8 68.3c-4.1 4.1-1.2 11.1 4.6 11.1h314.8c3.5 0 6.8-1.3 9.2-3.7l64.6-64.6c4.1-4.1 1.2-11.1-4.6-11.1H73z" />
-                          </svg>
+                        <div className="w-8 h-8 rounded-full bg-black flex items-center justify-center border-2 border-white/10 shadow-sm overflow-hidden p-1.5">
+                          <img src="/SOL.svg" alt="SOL" className="w-full h-full object-contain" />
                         </div>
                         <div className="flex flex-col">
                           <span className="font-medium text-gray-600">SOL</span>

@@ -74,9 +74,13 @@ export const StreamingValue = ({
                 <EyeOff className="w-4 h-4 text-muted-foreground" />
               )}
             </button>
-            <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-accent border border-primary/20 text-xs font-medium text-primary">
-              <div className="w-1.5 h-1.5 rounded-full bg-primary" />
-              Private
+            <span className="flex items-center gap-1 px-2 py-1 rounded-full bg-muted border border-muted-foreground/20 text-xs font-medium text-muted-foreground">
+              <div
+                className={`w-1.5 h-1.5 rounded-full ${
+                  showValue ? "bg-success" : "bg-muted-foreground"
+                }`}
+              />
+              {showValue ? "Public" : "Private"}
             </span>
             <button
               onClick={() => refetch()}

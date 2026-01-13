@@ -145,7 +145,7 @@ export const Sidebar = () => {
           <Link href="/landing">
             <div className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all cursor-pointer">
               <Home className="w-4 h-4" />
-              <span>Back to main page</span>
+              <span>Back to landing page</span>
             </div>
           </Link>
         </div>
