@@ -304,7 +304,7 @@ export function useAgentChat(walletAddress: string) {
             const faucetData = await faucetRes.json();
             if (faucetData.success) {
               updateMessage(msgId, {
-                content: `### 🎁 Faucet Success\n\nI've successfully sent **${faucet.amount} ${faucet.currency}** to your wallet!\n\n**Transaction:** \`${faucetData.signature.slice(0, 10)}...${faucetData.signature.slice(-10)}\`\n\n🔗 **[View on Solscan Explorer](https://solscan.io/tx/${faucetData.signature}?cluster=devnet)**`,
+                content: `### 🎁 Faucet Success\n\nI've successfully sent **${faucet.amount} ${faucet.currency}** to your wallet!\n\n**Transaction:** \`${faucetData.signature.slice(0, 10)}...${faucetData.signature.slice(-10)}\`\n\n🔗 **[View on Solscan Explorer](https://solscan.io/tx/${faucetData.signature}?cluster=${SOLANA_NETWORK})**`,
                 status: "completed",
                 hasAnimated: true
               });
@@ -382,6 +382,8 @@ export function useAgentChat(walletAddress: string) {
 
     try {
       if (selectedService) {
+        // Log the active network for debugging
+        console.log(`[useAgentChat] Executing service on network: ${SOLANA_NETWORK}`);
         await executeService(selectedService, userInput);
       } else {
         const lower = userInput.toLowerCase();
@@ -429,12 +431,14 @@ export function useAgentChat(walletAddress: string) {
 
       const transaction = Transaction.from(Buffer.from(txBase64, "base64"));
       
-      // SENIOR FIX: Freshly fetch blockhash on the frontend to ensure network alignment
-      // This solves the "Network mismatch" if the backend accidentally provided a blockhash from another cluster.
-      const connection = new Connection(clusterApiUrl("devnet"), "confirmed");
+      // SENIOR FIX: Freshly fetch blockhash from the configured RPC to ensure network alignment
+      // This solves the "Network mismatch" by ensuring the blockhash matches the cluster expected by the wallet.
+      const { getRpcEndpoints } = await import("@/app/config/solana");
+      const endpoints = getRpcEndpoints(SOLANA_NETWORK);
+      const connection = new Connection(endpoints[0], "confirmed");
       const { blockhash, lastValidBlockHeight } = await connection.getLatestBlockhash();
       
-      console.log("[useAgentChat] Overriding blockhash for network alignment:", blockhash);
+      console.log(`[useAgentChat] Overriding blockhash for ${SOLANA_NETWORK} alignment:`, blockhash);
       transaction.recentBlockhash = blockhash;
       transaction.lastValidBlockHeight = lastValidBlockHeight;
 
@@ -492,10 +496,10 @@ export function useAgentChat(walletAddress: string) {
                  `**Payment Status:** ✅ Confirmed & Settled\n\n` +
                  `**Transaction Details:**\n` +
                  `- **Hash:** \`${truncatedSig}\`\n` +
-                 `- **Network:** Solana Devnet\n` +
+                 `- **Network:** Solana ${SOLANA_NETWORK === 'devnet' ? 'Devnet' : 'Mainnet'}\n` +
                  `- **Currency:** ${currency}\n` +
                  `- **Method:** x402 Yield Protocol\n\n` +
-                 `🔗 **[View on Solscan Explorer](https://solscan.io/tx/${sigString}?cluster=devnet)**`,
+                 `🔗 **[View on Solscan Explorer](https://solscan.io/tx/${sigString}?cluster=${SOLANA_NETWORK})**`,
         status: "completed",
         cost: hasSubscription ? 0 : totalCost,
         proposal: undefined

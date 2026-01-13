@@ -71,7 +71,7 @@ async function fetchSolBalance(
  */
 export function useSolanaBalance(
   address: string | undefined,
-  network: SolanaNetwork = SOLANA_NETWORKS.MAINNET
+  network: SolanaNetwork = (process.env.NEXT_PUBLIC_SOLANA_NETWORK as any) || SOLANA_NETWORKS.MAINNET
 ) {
   // Validate address format (Solana addresses are base58, typically 32-44 chars)
   const isValidAddress =
