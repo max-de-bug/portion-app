@@ -82,7 +82,7 @@ export const CTA = () => {
         
         {status !== "success" && (
           <p className="text-xs text-muted-foreground mt-4">
-            No spam. We'll notify you when Portion launches.
+            No spam. Only updates.
           </p>
         )}
       </div>
