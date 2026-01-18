@@ -36,13 +36,14 @@ if (NETWORK === "devnet" && RPC_ENDPOINTS[0]?.includes("mainnet")) {
   RPC_ENDPOINTS.shift(); // Remove mainnet override if we are in devnet mode
 }
 
-// Token mint addresses
+// Token mint addresses - Updated for Mainnet
 export const TOKEN_MINTS = {
-  USDV: process.env.USDV_MINT || "USDVXBhRzuSLKGtq8T9aA3LJNFGpTxvYokGJjm9GkuJ",
-  sUSDV: process.env.SUSDV_MINT || "sUSDVyWxWGHNT8xqJBzFqFJKNGFXv9fDJ1dqbT1Vy9R",
-  USDC: process.env.USDC_MINT || "4zMMC9srt5Ri5X14GAgXhaHii3GnPAEERYPJgZJDncDU", // Devnet USDC
-  SOLO: "SoLoNBhyFwRZzvcJvMVP3c7cjb3Ys5mcPP8DBhKvpump",
+  USDV: process.env.USDV_MINT || "Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C",
+  sUSDV: process.env.SUSDV_MINT || "pTA4St7D5WshfLUPBXoaxn5m8e3k2ort2DVt3gUTa17",
+  USDC: process.env.USDC_MINT || "EPjFWdd5AufqSSqeM2qN1xzybapC8G4wEGGkZwyTDt1v", // Mainnet USDC
+  SOLO: "SoLo9oxzLDpcq1dpqAgMwgce5WqkRDtNXK7EPnbmeta",
 };
+
 
 // Controls whether we mocking
 const MOCK_SOLANA = process.env.MOCK_SOLANA === "true" || process.env.NODE_ENV !== "production";

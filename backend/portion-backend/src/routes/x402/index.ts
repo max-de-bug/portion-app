@@ -2,6 +2,9 @@ import { FastifyPluginAsync } from "fastify";
 import { PublicKey } from "@solana/web3.js";
 import { getSpendableYield, getCachedYieldInfo } from "../../services/yield";
 import { executeAIService } from "../../services/ai";
+import { aiServices } from "../../db/schema";
+import { db } from "../../db";
+import { eq } from "drizzle-orm";
 
 /**
  * x402 Payment Protocol Routes
@@ -52,19 +55,6 @@ interface PaymentRequirements {
 //   };
 // }
 
-// Service pricing (in USD)
-const SERVICE_PRICING: Record<string, { price: number; platformFee: number; description: string }> =
-  {
-    "gpt-4": { price: 0.03, platformFee: 0.005, description: "GPT-4 text completion" },
-    "gpt-4-turbo": { price: 0.01, platformFee: 0.002, description: "GPT-4 Turbo completion" },
-    "claude-3": { price: 0.025, platformFee: 0.004, description: "Claude 3 Sonnet completion" },
-    "dall-e-3": { price: 0.04, platformFee: 0.008, description: "DALL-E 3 image generation" },
-    "whisper": { price: 0.006, platformFee: 0.001, description: "Whisper audio transcription" },
-    "web-search": { price: 0, platformFee: 0, description: "Web search" },
-    "solana-agent": { price: 0, platformFee: 0, description: "Solana transactions, purchases, and faucet" },
-  };
-
-// In-memory stores (use Redis in production)
 const verifiedPayments = new Map<
   string,
   { 
@@ -94,14 +84,19 @@ const x402Plugin: FastifyPluginAsync = async (fastify): Promise<void> => {
    * List available AI services with pricing
    */
   fastify.get("/services", async (request, reply) => {
-    const services = Object.entries(SERVICE_PRICING).map(([id, info]) => ({
-      id,
-      ...info,
-      x402Enabled: true,
-    }));
+    const services = await db
+      .select()
+      .from(aiServices)
+      .where(eq(aiServices.isActive, true));
 
     return reply.send({
-      services,
+      services: services.map(s => ({
+        id: s.id,
+        price: parseFloat(s.price),
+        platformFee: parseFloat(s.platformFee),
+        description: s.description,
+        x402Enabled: true,
+      })),
       network: NETWORK,
       paymentMethod: "x402",
       acceptedTokens: ["SOL", "sUSDV-yield"],
@@ -122,13 +117,22 @@ const x402Plugin: FastifyPluginAsync = async (fastify): Promise<void> => {
   }>("/prepare", async (request, reply) => {
     const { service, walletAddress } = request.body;
 
-    const serviceInfo = SERVICE_PRICING[service];
+    const [serviceInfo] = await db
+      .select()
+      .from(aiServices)
+      .where(eq(aiServices.id, service))
+      .limit(1);
+
     if (!serviceInfo) {
+      const allServices = await db.select({ id: aiServices.id }).from(aiServices).where(eq(aiServices.isActive, true));
       return reply.status(400).send({
         error: "Unknown service",
-        availableServices: Object.keys(SERVICE_PRICING),
+        availableServices: allServices.map(s => s.id),
       });
     }
+
+    // Convert decimal strings to numbers
+    const price = parseFloat(serviceInfo.price);
 
     // Check user's spendable yield
     // OPTIMIZATION: Try to use cached info first to avoid RPC 429s during chat interactions
@@ -146,10 +150,10 @@ const x402Plugin: FastifyPluginAsync = async (fastify): Promise<void> => {
       spendableYield = await getSpendableYield(walletAddress);
     }
 
-    if (spendableYield < serviceInfo.price) {
+    if (spendableYield < price) {
       return reply.status(402).send({
         error: "Insufficient yield",
-        required: serviceInfo.price,
+        required: price,
         available: spendableYield,
         message:
           "Not enough spendable yield. Your sUSDV needs to appreciate more.",
@@ -164,7 +168,7 @@ const x402Plugin: FastifyPluginAsync = async (fastify): Promise<void> => {
     const requirements: PaymentRequirements = {
       scheme: "exact",
       network: `solana:${NETWORK}`,
-      maxAmountRequired: Math.ceil(serviceInfo.price * 1e6).toString(), // Convert to micro-units
+      maxAmountRequired: Math.ceil(price * 1e6).toString(), // Convert to micro-units
       resource: `/x402/execute/${service}`,
       description: serviceInfo.description,
       payTo: TREASURY_ADDRESS,
@@ -174,7 +178,7 @@ const x402Plugin: FastifyPluginAsync = async (fastify): Promise<void> => {
     // Allocate yield temporarily
     yieldAllocations.set(paymentId, {
       wallet: walletAddress,
-      amount: serviceInfo.price,
+      amount: price,
       expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     });
 
@@ -192,13 +196,14 @@ const x402Plugin: FastifyPluginAsync = async (fastify): Promise<void> => {
         paymentId,
         requirements,
         service: {
-          id: service,
           ...serviceInfo,
+          price: parseFloat(serviceInfo.price),
+          platformFee: parseFloat(serviceInfo.platformFee),
         },
         yield: {
           available: spendableYield,
-          required: serviceInfo.price,
-          remaining: spendableYield - serviceInfo.price,
+          required: price,
+          remaining: spendableYield - price,
         },
         instructions:
           "Sign the payment authorization and call /x402/execute with X-Payment header",
@@ -226,12 +231,21 @@ const x402Plugin: FastifyPluginAsync = async (fastify): Promise<void> => {
     // const paymentHeader = request.headers["x-payment"];
     // const { walletAddress } = request.body;
 
-    const serviceInfo = SERVICE_PRICING[service];
+    const [serviceInfo] = await db
+      .select()
+      .from(aiServices)
+      .where(eq(aiServices.id, service))
+      .limit(1);
+    
     const isSubscription = request.headers["x-subscription"] === "active";
 
     if (!serviceInfo) {
       return reply.status(400).send({ error: "Unknown service" });
     }
+
+    // Convert decimal strings to numbers
+    const price = parseFloat(serviceInfo.price);
+    const platformFee = parseFloat(serviceInfo.platformFee);
 
     // Verify yield allocation exists
     const allocation = yieldAllocations.get(paymentId);
@@ -257,13 +271,13 @@ const x402Plugin: FastifyPluginAsync = async (fastify): Promise<void> => {
     yieldAllocations.delete(paymentId);
 
     // Total cost calculation
-    const totalCost = isSubscription ? 0 : serviceInfo.price + serviceInfo.platformFee;
+    const totalCost = isSubscription ? 0 : price + platformFee;
 
     // Record the payment
     verifiedPayments.set(paymentId, {
       amount: totalCost,
-      basePrice: serviceInfo.price,
-      platformFee: serviceInfo.platformFee,
+      basePrice: price,
+      platformFee: platformFee,
       isSubscription,
       service,
       timestamp: new Date(),
@@ -290,8 +304,8 @@ const x402Plugin: FastifyPluginAsync = async (fastify): Promise<void> => {
       receipt: {
         id: paymentId,
         amount: totalCost,
-        base: serviceInfo.price,
-        fee: serviceInfo.platformFee,
+        base: price,
+        fee: platformFee,
         currency: "USD (from sUSDV yield)",
         timestamp: new Date().toISOString(),
         network: NETWORK,

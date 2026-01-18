@@ -72,22 +72,29 @@ export const Sidebar = () => {
         </div>
       </div>
 
-      {/* Privacy Mode Toggle - DISABLED as requested */}
-      <div className="p-4 opacity-50 cursor-not-allowed">
-        <div className="w-full flex items-center justify-between p-3 rounded-xl bg-accent border border-primary/20">
+      {/* Privacy Mode Toggle */}
+      <div className="p-4">
+        <button
+          onClick={() => setPrivacyMode(!privacyMode)}
+          className="w-full flex items-center justify-between p-3 rounded-xl bg-accent border border-primary/20 hover:bg-accent/80 transition-all group"
+        >
           <div className="flex items-center gap-2">
-            <Shield className="w-4 h-4 text-muted-foreground" />
+            <Shield className="w-4 h-4 text-primary" />
             <div className="text-left">
-              <p className="text-xs font-medium text-muted-foreground">
+              <p className="text-xs font-medium text-foreground">
                 Privacy Mode
               </p>
               <p className="text-[10px] text-muted-foreground">
-                Locked for Beta
+                {privacyMode ? "Active" : "Inactive"}
               </p>
             </div>
           </div>
-          <div className="w-2 h-2 rounded-full bg-zinc-600" />
-        </div>
+          <div
+            className={`w-2 h-2 rounded-full ${
+              privacyMode ? "bg-primary animate-pulse" : "bg-muted-foreground"
+            }`}
+          />
+        </button>
       </div>
 
       {/* Navigation */}
@@ -145,7 +152,7 @@ export const Sidebar = () => {
           <Link href="/landing">
             <div className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-all cursor-pointer">
               <Home className="w-4 h-4" />
-              <span>Back to landing page</span>
+              <span>Back to main page</span>
             </div>
           </Link>
         </div>

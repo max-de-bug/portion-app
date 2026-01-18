@@ -1,6 +1,8 @@
 import { FastifyPluginAsync } from "fastify";
 import { getYieldInfo, fetchCurrentAPY, getSpendableYield } from "../../services/yield";
+
 import { getSolBalance, getTokenBalance, TOKEN_MINTS } from "../../services/solana";
+import { getAggregatedYields } from "../../services/yieldAggregator";
 
 /**
  * API Routes for Portion App
@@ -103,6 +105,23 @@ const apiPlugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
       });
     }
   });
+
+  /**
+   * GET /api/aggregator/yields
+   * Get ranked yield opportunities for a specific token (USDV|SOLO)
+   */
+  fastify.get<{
+    Querystring: { token?: string };
+  }>("/aggregator/yields", async (request, reply) => {
+    const { token = "USDV" } = request.query;
+    const yields = await getAggregatedYields(token);
+    return reply.send({
+      yields,
+      token,
+      timestamp: new Date().toISOString(),
+    });
+  });
+
 
   /**
    * GET /api/health

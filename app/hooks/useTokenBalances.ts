@@ -8,12 +8,13 @@ import {
   clusterApiUrl,
 } from "@solana/web3.js";
 
-// Token mint addresses
+// Token mint addresses - Updated for Mainnet
 export const TOKEN_MINTS = {
-  USDV: "USDVXBhRzuSLKGtq8T9aA3LJNFGpTxvYokGJjm9GkuJ", // Replace with actual
-  sUSDV: "sUSDVyWxWGHNT8xqJBzFqFJKNGFXv9fDJ1dqbT1Vy9R", // Replace with actual
-  SOLO: "SoLoNBhyFwRZzvcJvMVP3c7cjb3Ys5mcPP8DBhKvpump", // Solomon token
+  USDV: "Ex5DaKYMCN6QWFA4n67TmMwsH8MJV68RX6YXTmVM532C",
+  sUSDV: "pTA4St7D5WshfLUPBXoaxn5m8e3k2ort2DVt3gUTa17",
+  SOLO: "SoLo9oxzLDpcq1dpqAgMwgce5WqkRDtNXK7EPnbmeta",
 } as const;
+
 
 // RPC endpoints with fallbacks
 const RPC_ENDPOINTS: Record<string, string[]> = {
@@ -60,7 +61,8 @@ const DEFAULT_BALANCE_DATA: BalanceData = {
  */
 export function useTokenBalances({
   walletAddress,
-  network = "devnet",
+  network = "mainnet-beta",
+
   refreshInterval = 15000,
   enabled = true,
 }: UseTokenBalancesOptions = {}) {

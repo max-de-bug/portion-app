@@ -3,20 +3,33 @@
 import { useQuery } from "@tanstack/react-query";
 import { Connection, PublicKey, LAMPORTS_PER_SOL } from "@solana/web3.js";
 
-import { getRpcEndpoints, SOLANA_NETWORKS, type SolanaNetwork } from "@/app/config/solana";
+// Reliable RPC endpoints that support CORS
+const RPC_ENDPOINTS: Record<string, string[]> = {
+  "mainnet-beta": [
+    "https://solana-mainnet.rpc.extrnode.com",
+    "https://rpc.ankr.com/solana",
+    "https://solana.public-rpc.com",
+  ],
+  devnet: [
+    "https://api.devnet.solana.com",
+    "https://rpc.ankr.com/solana_devnet",
+    "https://devnet.helius-rpc.com/?api-key=demo",
+    "https://solana-devnet.g.alchemy.com/v2/demo",
+  ],
+};
 
 /**
  * Fetch SOL balance with fallback RPC endpoints
  */
 async function fetchSolBalance(
   address: string,
-  network: SolanaNetwork
+  network: "mainnet-beta" | "devnet"
 ): Promise<number> {
   if (!address || address.startsWith("0x")) {
     throw new Error("Invalid Solana address");
   }
 
-  const endpoints = getRpcEndpoints(network);
+  const endpoints = RPC_ENDPOINTS[network] || RPC_ENDPOINTS["mainnet-beta"];
   const publicKey = new PublicKey(address);
 
   console.log(
@@ -57,11 +70,7 @@ async function fetchSolBalance(
 
   const errorMessage = `All ${network} RPC endpoints failed:\n${errors.join(
     "\n"
-  )}\n\n${
-    network === SOLANA_NETWORKS.MAINNET
-      ? "Tip: Use a private RPC URL (like Helius or QuickNode) via NEXT_PUBLIC_SOLANA_MAINNET_RPC_URL to avoid 403 Forbidden errors on mainnet."
-      : ""
-  }`;
+  )}`;
   console.error(`[useSolanaBalance] ${errorMessage}`);
   throw new Error(errorMessage);
 }
@@ -71,7 +80,7 @@ async function fetchSolBalance(
  */
 export function useSolanaBalance(
   address: string | undefined,
-  network: SolanaNetwork = (process.env.NEXT_PUBLIC_SOLANA_NETWORK as any) || SOLANA_NETWORKS.MAINNET
+  network: "mainnet-beta" | "devnet" = "mainnet-beta"
 ) {
   // Validate address format (Solana addresses are base58, typically 32-44 chars)
   const isValidAddress =
