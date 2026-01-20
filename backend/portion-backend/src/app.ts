@@ -56,7 +56,7 @@ const app: FastifyPluginAsync<AppOptions> = async (
       cb(new Error("Not allowed by CORS"), false);
     },
     methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-    allowedHeaders: ["Content-Type", "Authorization", "X-Payment", "X-Subscription"],
+    allowedHeaders: ["Content-Type", "Authorization", "X-Payment", "X-Subscription", "X-Session-Token"],
     credentials: true,
   });
 

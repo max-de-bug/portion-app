@@ -19,80 +19,282 @@ export interface Message {
   };
 }
 
-interface ChatState {
+export interface Conversation {
+  id: string;
+  title: string;
   messages: Message[];
-  input: string;
   selectedService: AIService | null;
+  createdAt: Date;
+  updatedAt: Date;
+}
+
+interface ChatState {
+  conversations: Conversation[];
+  activeConversationId: string | null;
+  input: string;
   
-  // Actions
+  // Computed-like getters
+  getActiveConversation: () => Conversation | undefined;
+  getActiveMessages: () => Message[];
+  getSelectedService: () => AIService | null;
+  
+  // Conversation Actions
+  createConversation: () => string;
+  switchConversation: (id: string) => void;
+  deleteConversation: (id: string) => void;
+  renameConversation: (id: string, title: string) => void;
+  
+  // Message Actions (operates on active conversation)
   addMessage: (msg: Message) => void;
   updateMessage: (id: string, updates: Partial<Message>) => void;
+  markMessageAsAnimated: (id: string) => void;
+  
+  // Input Actions
   setInput: (value: string) => void;
   setSelectedService: (service: AIService | null) => void;
-  markMessageAsAnimated: (id: string) => void;
+  
+  // Legacy compatibility
+  messages: Message[];
+  selectedService: AIService | null;
   clearHistory: () => void;
 }
 
+const generateConversationId = () => 
+  `conv-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+
+const generateDefaultTitle = (firstMessage?: string) => {
+  if (firstMessage) {
+    const trimmed = firstMessage.slice(0, 35);
+    return firstMessage.length > 35 ? `${trimmed}...` : trimmed;
+  }
+  return "New Chat";
+};
+
+const createWelcomeMessage = (): Message => ({
+  id: "welcome",
+  role: "assistant",
+  content: "Welcome to Portion x402.\n\nSpend your sUSDV yield on AI services. Select a service below or describe your task.",
+  timestamp: new Date(),
+  hasAnimated: true,
+});
+
+const createDefaultConversation = (): Conversation => ({
+  id: generateConversationId(),
+  title: "New Chat",
+  messages: [createWelcomeMessage()],
+  selectedService: null,
+  createdAt: new Date(),
+  updatedAt: new Date(),
+});
+
 export const useChatStore = create<ChatState>()(
   persist(
-    (set) => ({
-      messages: [
-        {
-          id: "welcome",
-          role: "assistant",
-          content: "Welcome to Portion x402.\n\nSpend your sUSDV yield on AI services. Select a service below or describe your task.",
-          timestamp: new Date(),
-          hasAnimated: true, // Welcome message should not animate on reload
-        },
-      ],
+    (set, get) => ({
+      conversations: [createDefaultConversation()],
+      activeConversationId: null, // Will be set to first conversation on init
       input: "",
-      selectedService: null,
-
-      addMessage: (msg) =>
-        set((state) => ({ messages: [...state.messages, msg] })),
-
-      updateMessage: (id, updates) =>
-        set((state) => ({
-          messages: state.messages.map((m) =>
-            m.id === id ? { ...m, ...updates } : m
-          ),
-        })),
-
-      setInput: (value) => set({ input: value }),
       
-      setSelectedService: (service) => set({ selectedService: service }),
-
-      markMessageAsAnimated: (id) =>
-        set((state) => ({
-          messages: state.messages.map((m) =>
-            m.id === id ? { ...m, hasAnimated: true } : m
-          ),
-        })),
-
-      clearHistory: () =>
-        set({
-          messages: [
-            {
-              id: "welcome",
-              role: "assistant",
-              content: "Welcome to Portion x402.\n\nSpend your sUSDV yield on AI services. Select a service below or describe your task.",
-              timestamp: new Date(),
-              hasAnimated: true,
-            },
-          ],
+      // Computed getters
+      getActiveConversation: () => {
+        const state = get();
+        const id = state.activeConversationId || state.conversations[0]?.id;
+        return state.conversations.find(c => c.id === id);
+      },
+      
+      getActiveMessages: () => {
+        const conv = get().getActiveConversation();
+        return conv?.messages || [];
+      },
+      
+      getSelectedService: () => {
+        const conv = get().getActiveConversation();
+        return conv?.selectedService || null;
+      },
+      
+      // Legacy computed properties for backwards compatibility
+      get messages() {
+        return get().getActiveMessages();
+      },
+      
+      get selectedService() {
+        return get().getSelectedService();
+      },
+      
+      // Conversation Actions
+      createConversation: () => {
+        const newConv = createDefaultConversation();
+        set(state => ({
+          conversations: [newConv, ...state.conversations],
+          activeConversationId: newConv.id,
           input: "",
-          selectedService: null,
-        }),
+        }));
+        return newConv.id;
+      },
+      
+      switchConversation: (id: string) => {
+        set({ activeConversationId: id, input: "" });
+      },
+      
+      deleteConversation: (id: string) => {
+        set(state => {
+          const remaining = state.conversations.filter(c => c.id !== id);
+          // If no conversations left, create a new one
+          if (remaining.length === 0) {
+            const newConv = createDefaultConversation();
+            return {
+              conversations: [newConv],
+              activeConversationId: newConv.id,
+            };
+          }
+          // If active conversation was deleted, switch to first
+          const newActiveId = state.activeConversationId === id 
+            ? remaining[0].id 
+            : state.activeConversationId;
+          return {
+            conversations: remaining,
+            activeConversationId: newActiveId,
+          };
+        });
+      },
+      
+      renameConversation: (id: string, title: string) => {
+        set(state => ({
+          conversations: state.conversations.map(c =>
+            c.id === id ? { ...c, title, updatedAt: new Date() } : c
+          ),
+        }));
+      },
+      
+      // Message Actions
+      addMessage: (msg: Message) => {
+        set(state => {
+          const activeId = state.activeConversationId || state.conversations[0]?.id;
+          if (!activeId) return state;
+          
+          return {
+            conversations: state.conversations.map(c => {
+              if (c.id !== activeId) return c;
+              
+              // Update title from first user message if still default
+              const isFirstUserMessage = msg.role === "user" && 
+                c.messages.filter(m => m.role === "user").length === 0;
+              const newTitle = isFirstUserMessage && c.title === "New Chat"
+                ? generateDefaultTitle(msg.content)
+                : c.title;
+              
+              return {
+                ...c,
+                title: newTitle,
+                messages: [...c.messages, msg],
+                updatedAt: new Date(),
+              };
+            }),
+          };
+        });
+      },
+      
+      updateMessage: (id: string, updates: Partial<Message>) => {
+        set(state => {
+          const activeId = state.activeConversationId || state.conversations[0]?.id;
+          if (!activeId) return state;
+          
+          return {
+            conversations: state.conversations.map(c => {
+              if (c.id !== activeId) return c;
+              return {
+                ...c,
+                messages: c.messages.map(m =>
+                  m.id === id ? { ...m, ...updates } : m
+                ),
+                updatedAt: new Date(),
+              };
+            }),
+          };
+        });
+      },
+      
+      markMessageAsAnimated: (id: string) => {
+        get().updateMessage(id, { hasAnimated: true });
+      },
+      
+      // Input Actions
+      setInput: (value: string) => set({ input: value }),
+      
+      setSelectedService: (service: AIService | null) => {
+        set(state => {
+          const activeId = state.activeConversationId || state.conversations[0]?.id;
+          if (!activeId) return state;
+          
+          return {
+            conversations: state.conversations.map(c =>
+              c.id === activeId ? { ...c, selectedService: service } : c
+            ),
+          };
+        });
+      },
+      
+      // Legacy clear - clears active conversation
+      clearHistory: () => {
+        set(state => {
+          const activeId = state.activeConversationId || state.conversations[0]?.id;
+          if (!activeId) return state;
+          
+          return {
+            conversations: state.conversations.map(c =>
+              c.id === activeId
+                ? {
+                    ...c,
+                    messages: [createWelcomeMessage()],
+                    selectedService: null,
+                    title: "New Chat",
+                    updatedAt: new Date(),
+                  }
+                : c
+            ),
+            input: "",
+          };
+        });
+      },
     }),
     {
-      name: "portion_chat_storage_v1",
+      name: "portion_chat_storage_v2",
       partialize: (state) => ({
-        messages: state.messages,
-        input: state.input, // Optional: restore typed input
-        // selectedService is complex object, maybe skip or ensure serializable. 
-        // It's just config data, so it's fine to persist if it matches usage.
-        selectedService: state.selectedService 
+        conversations: state.conversations,
+        activeConversationId: state.activeConversationId,
+        input: state.input,
       }),
+      // Handle date serialization/deserialization
+      storage: {
+        getItem: (name: string) => {
+          const str = localStorage.getItem(name);
+          if (!str) return null;
+          
+          const parsed = JSON.parse(str);
+          // Convert date strings back to Date objects
+          if (parsed.state?.conversations) {
+            parsed.state.conversations = parsed.state.conversations.map((c: Conversation) => ({
+              ...c,
+              createdAt: new Date(c.createdAt),
+              updatedAt: new Date(c.updatedAt),
+              messages: c.messages.map((m: Message) => ({
+                ...m,
+                timestamp: new Date(m.timestamp),
+              })),
+            }));
+            // Ensure there's always a valid active conversation
+            if (!parsed.state.activeConversationId && parsed.state.conversations.length > 0) {
+              parsed.state.activeConversationId = parsed.state.conversations[0].id;
+            }
+          }
+          return parsed;
+        },
+        setItem: (name: string, value: unknown) => {
+          localStorage.setItem(name, JSON.stringify(value));
+        },
+        removeItem: (name: string) => {
+          localStorage.removeItem(name);
+        },
+      },
     }
   )
 );
