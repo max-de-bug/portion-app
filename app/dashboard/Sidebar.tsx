@@ -11,6 +11,7 @@ import {
   Home,
   Sparkles,
   KeyRound,
+  Search,
 } from "lucide-react";
 import { useState } from "react";
 import Link from "next/link";
@@ -31,7 +32,8 @@ const navItems: NavItem[] = [
   { icon: LayoutDashboard, label: "Dashboard", href: "/dashboard" },
   { icon: TrendingUp, label: "Yield", href: "/dashboard/yield" },
   { icon: Bot, label: "Portion AI", href: "/dashboard/ai" },
-  { icon: Sparkles, label: "DLMM", href: "/dashboard/dlmm", badge: "New" },
+  { icon: Sparkles, label: "Pool", href: "/dashboard/pool", badge: "New" },
+  { icon: Search, label: "Wallet Explorer", href: "/dashboard/wallet-explorer" },
 ];
 
 export const Sidebar = () => {
@@ -114,8 +116,8 @@ export const Sidebar = () => {
             const isActive = pathname === item.href || 
               (item.href !== "/dashboard" && pathname.startsWith(item.href));
 
-            const isDLMM = item.label === "DLMM";
-            const activeStyles = isDLMM
+            const isPool = item.label === "Pool";
+            const activeStyles = isPool
               ? "bg-gradient-to-r from-indigo-500 to-purple-600 text-white shadow-md shadow-indigo-500/20"
               : "bg-primary text-white shadow-sm";
 
@@ -129,7 +131,7 @@ export const Sidebar = () => {
                       : "text-muted-foreground hover:text-foreground hover:bg-muted"
                   }`}
                 >
-                  <item.icon className={`w-4 h-4 ${isActive ? "text-white" : isDLMM ? "text-indigo-500" : ""}`} />
+                  <item.icon className={`w-4 h-4 ${isActive ? "text-white" : isPool ? "text-indigo-500" : ""}`} />
                   <span className="flex-1">{item.label}</span>
                   {item.badge && (
                     <span className="px-1.5 py-0.5 rounded text-[9px] font-bold uppercase bg-emerald-500 text-white">

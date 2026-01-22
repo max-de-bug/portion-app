@@ -86,7 +86,7 @@ export async function getAggregatedYields(token = "USDV"): Promise<YieldOpportun
       link: "https://www.orca.so",
     });
 
-    // 3. Meteora (DLMM)
+    // 3. Meteora (Pool)
     opportunities.push({
       id: "meteora-usdv-sol",
       protocol: "Meteora",
@@ -176,7 +176,7 @@ export async function getAggregatedYields(token = "USDV"): Promise<YieldOpportun
         opportunities.push({
           id: `meteora-pool-${poolAddress}`,
           protocol: "Meteora",
-          name: `${name} (DLMM)`,
+          name: `${name} (Pool)`,
           apr: baseApy * 0.8,
           apy: baseApy,
           tvl: tvl,

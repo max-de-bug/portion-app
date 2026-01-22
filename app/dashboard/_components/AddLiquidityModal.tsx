@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { motion, AnimatePresence } from "framer-motion";
 import { 
   X, 
@@ -10,9 +10,9 @@ import {
   Zap, 
   TrendingUp, 
   Settings2,
-  AlertTriangle,
   RefreshCcw
 } from "lucide-react";
+import { PriceRangePicker } from "./PriceRangePicker";
 
 interface AddLiquidityModalProps {
   isOpen: boolean;
@@ -31,6 +31,28 @@ export const AddLiquidityModal = ({ isOpen, onClose, pool }: AddLiquidityModalPr
   const [tokenBAmount, setTokenBAmount] = useState("");
   const [strategy, setStrategy] = useState<"spot" | "concentrated" | "curve">("concentrated");
   const [isProcessing, setIsProcessing] = useState(false);
+  
+  // Price range state - default to ±10% from current price
+  const [minPrice, setMinPrice] = useState(pool.price * 0.9);
+  const [maxPrice, setMaxPrice] = useState(pool.price * 1.1);
+
+  // Update price range when pool changes
+  useMemo(() => {
+    setMinPrice(pool.price * 0.9);
+    setMaxPrice(pool.price * 1.1);
+  }, [pool.price]);
+
+  const handleRangeChange = (min: number, max: number) => {
+    setMinPrice(min);
+    setMaxPrice(max);
+  };
+
+  // Calculate estimated bins based on price range
+  const estimatedBins = useMemo(() => {
+    const priceRange = maxPrice - minPrice;
+    const binStep = pool.price * 0.005; // 0.5% bin step
+    return Math.max(1, Math.ceil(priceRange / binStep));
+  }, [minPrice, maxPrice, pool.price]);
 
   if (!isOpen) return null;
 
@@ -66,6 +88,14 @@ export const AddLiquidityModal = ({ isOpen, onClose, pool }: AddLiquidityModalPr
     },
   ];
 
+  // Format price for display
+  const formatPrice = (price: number) => {
+    if (price < 0.01) return price.toFixed(6);
+    if (price < 1) return price.toFixed(4);
+    if (price < 100) return price.toFixed(2);
+    return price.toLocaleString(undefined, { maximumFractionDigits: 2 });
+  };
+
   return (
     <AnimatePresence>
       <div className="fixed inset-0 z-[100] flex items-center justify-center p-4">
@@ -83,10 +113,10 @@ export const AddLiquidityModal = ({ isOpen, onClose, pool }: AddLiquidityModalPr
           initial={{ opacity: 0, scale: 0.95, y: 20 }}
           animate={{ opacity: 1, scale: 1, y: 0 }}
           exit={{ opacity: 0, scale: 0.95, y: 20 }}
-          className="relative w-full max-w-xl bg-zinc-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden"
+          className="relative w-full max-w-xl bg-zinc-900 border border-white/10 rounded-3xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
         >
           {/* Header */}
-          <div className="p-6 border-b border-white/5 flex items-center justify-between bg-gradient-to-r from-emerald-500/5 to-transparent">
+          <div className="p-6 border-b border-white/5 flex items-center justify-between bg-gradient-to-r from-emerald-500/5 to-transparent sticky top-0 z-10 bg-zinc-900/95 backdrop-blur-sm">
             <div className="flex items-center gap-3">
               <div className="w-10 h-10 rounded-xl bg-emerald-500/10 flex items-center justify-center">
                 <Plus className="w-6 h-6 text-emerald-500" />
@@ -136,6 +166,16 @@ export const AddLiquidityModal = ({ isOpen, onClose, pool }: AddLiquidityModalPr
               </div>
             </div>
 
+            {/* Price Range Picker */}
+            <PriceRangePicker
+              currentPrice={pool.price}
+              minPrice={minPrice}
+              maxPrice={maxPrice}
+              onRangeChange={handleRangeChange}
+              tokenA={pool.token}
+              tokenB={pool.base}
+            />
+
             {/* Token Inputs */}
             <div className="space-y-4">
               {/* Token A */}
@@ -181,15 +221,30 @@ export const AddLiquidityModal = ({ isOpen, onClose, pool }: AddLiquidityModalPr
               </div>
             </div>
 
-            {/* Price Range Summary */}
+            {/* Range Info Summary */}
             <div className="p-4 rounded-2xl bg-emerald-500/5 border border-emerald-500/10 space-y-3">
               <div className="flex items-start gap-3">
                 <Info className="w-5 h-5 text-emerald-500 shrink-0 mt-0.5" />
-                <div className="space-y-1">
-                  <p className="text-sm font-bold text-emerald-100">Range Info</p>
-                  <p className="text-xs text-emerald-400/80 leading-relaxed">
-                    Providing liquidity in this range will earn you fees proportional to the trade volume within these bins. Current price: {pool.price} {pool.base}/{pool.token}
-                  </p>
+                <div className="space-y-2 flex-1">
+                  <p className="text-sm font-bold text-emerald-100">Position Summary</p>
+                  <div className="grid grid-cols-2 gap-2 text-xs">
+                    <div className="flex justify-between">
+                      <span className="text-emerald-400/80">Min Price:</span>
+                      <span className="font-mono text-emerald-300">{formatPrice(minPrice)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-emerald-400/80">Max Price:</span>
+                      <span className="font-mono text-emerald-300">{formatPrice(maxPrice)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-emerald-400/80">Current Price:</span>
+                      <span className="font-mono text-emerald-300">{formatPrice(pool.price)}</span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-emerald-400/80">Est. Bins:</span>
+                      <span className="font-mono text-emerald-300">{estimatedBins}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

@@ -4,7 +4,7 @@
  * Portion AI Chat Page
  * 
  * Dedicated page for AI-powered interactions using x402 protocol.
- * Features ChatGPT-style conversation tabs and CLLM/DLLM service selection.
+ * Features ChatGPT-style conversation tabs and AI service selection.
  */
 
 import { useEffect, useState, useRef, useCallback } from "react";
@@ -332,7 +332,7 @@ export default function PortionAIPage() {
 
             {showServiceSelector && (
               <div className="absolute right-0 top-full mt-2 w-72 bg-background border border-border rounded-xl shadow-lg z-50 p-2 animate-in fade-in zoom-in-95 duration-200">
-                <p className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase">CLLM / DLLM Models</p>
+                <p className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase">AI Models</p>
                 <div className="space-y-1">
                   {LLM_SERVICES.map((service) => (
                     <button
@@ -515,12 +515,12 @@ export default function PortionAIPage() {
           <PrepaidBalance walletAddress={walletAddress} />
           
           <div className="mt-6 p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20">
-            <h3 className="font-medium text-sm mb-2">About CLLM/DLLM</h3>
+            <h3 className="font-medium text-sm mb-2">About AI Models</h3>
             <p className="text-xs text-muted-foreground leading-relaxed">
-              <strong>CLLM</strong> (Centralized LLM) - Models like GPT-4, Claude-3 hosted on centralized infrastructure.
+              <strong>Cloud AI</strong> - Models like GPT-4, Claude-3 hosted on centralized infrastructure with fast response times.
             </p>
             <p className="text-xs text-muted-foreground leading-relaxed mt-2">
-              <strong>DLLM</strong> (Decentralized LLM) - Coming soon: Run AI inference on decentralized networks.
+              <strong>Decentralized AI</strong> - Coming soon: Run AI inference on decentralized networks for enhanced privacy.
             </p>
           </div>
         </div>

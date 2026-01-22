@@ -1,15 +1,15 @@
 "use client";
 
 /**
- * DLMM Dashboard
+ * Pool Dashboard
  * 
- * Dynamic Liquidity Market Maker Dashboard with premium UI
+ * Concentrated Liquidity Pool Dashboard with premium UI
  * Features interactive liquidity bin visualization, stats, and position management
  */
 
 import { useState, useMemo } from "react";
 import { motion } from "framer-motion";
-import { DLMMStatCard } from "@/app/dashboard/_components/DLMMStatCard";
+import { PoolStatCard } from "@/app/dashboard/_components/PoolStatCard";
 import { LiquidityBinsChart } from "@/app/dashboard/_components/LiquidityBinsChart";
 import { AddLiquidityModal } from "@/app/dashboard/_components/AddLiquidityModal";
 import { RemoveLiquidityModal } from "@/app/dashboard/_components/RemoveLiquidityModal";
@@ -68,7 +68,7 @@ const generateMockBins = (basePrice: number) => {
   return bins;
 };
 
-export default function DLMMDashboardPage() {
+export default function PoolDashboardPage() {
   const [selectedPool, setSelectedPool] = useState(MOCK_POOLS[0]);
   const [showPoolSelector, setShowPoolSelector] = useState(false);
   const [isRefreshing, setIsRefreshing] = useState(false);
@@ -125,11 +125,11 @@ export default function DLMMDashboardPage() {
             </div>
             <div>
               <h1 className="text-3xl font-black tracking-tight text-foreground flex items-center gap-2">
-                DLMM Dashboard
+                Pool Dashboard
                 <Sparkles className="w-6 h-6 text-emerald-500" />
               </h1>
               <p className="text-muted-foreground text-sm">
-                Dynamic Liquidity Market Maker • Concentrated Liquidity on Solana
+                Concentrated Liquidity Pools on Solana
               </p>
             </div>
           </div>
@@ -194,7 +194,7 @@ export default function DLMMDashboardPage() {
 
         {/* Stats Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <DLMMStatCard
+          <PoolStatCard
             title="Total Value Locked"
             value={stats.tvl}
             prefix="$"
@@ -203,7 +203,7 @@ export default function DLMMDashboardPage() {
             gradient="from-emerald-500 to-teal-500"
             delay={0}
           />
-          <DLMMStatCard
+          <PoolStatCard
             title="24h Volume"
             value={stats.volume24h}
             prefix="$"
@@ -212,7 +212,7 @@ export default function DLMMDashboardPage() {
             gradient="from-blue-500 to-cyan-500"
             delay={0.1}
           />
-          <DLMMStatCard
+          <PoolStatCard
             title="Pool APR"
             value={stats.apr}
             suffix="%"
@@ -221,7 +221,7 @@ export default function DLMMDashboardPage() {
             gradient="from-purple-500 to-indigo-500"
             delay={0.2}
           />
-          <DLMMStatCard
+          <PoolStatCard
             title="Active Positions"
             value={stats.activePositions}
             icon={Layers}
@@ -318,7 +318,8 @@ export default function DLMMDashboardPage() {
           </motion.div>
         </div>
 
-        {/* What is DLMM Section */}
+
+        {/* About Concentrated Liquidity Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
@@ -330,9 +331,9 @@ export default function DLMMDashboardPage() {
               <Info className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h2 className="text-2xl font-black mb-2">What is DLMM?</h2>
+              <h2 className="text-2xl font-black mb-2">About Concentrated Liquidity</h2>
               <p className="text-muted-foreground max-w-2xl">
-                Dynamic Liquidity Market Maker (DLMM) is an innovative AMM solution on Solana that enables 
+                Concentrated Liquidity Pools allow you to provide liquidity within specific price ranges, enabling 
                 <strong className="text-foreground"> zero-slippage trades</strong> within price bins.
               </p>
             </div>

@@ -1,15 +1,15 @@
 "use client";
 
 /**
- * DLMM Dashboard Component - Stat Card
+ * Pool Dashboard Component - Stat Card
  * 
- * Premium glassmorphism stat card for DLMM metrics
+ * Premium glassmorphism stat card for Pool metrics
  */
 
 import { motion } from "framer-motion";
 import { LucideIcon } from "lucide-react";
 
-interface DLMMStatCardProps {
+interface PoolStatCardProps {
   title: string;
   value: string | number;
   prefix?: string;
@@ -23,7 +23,7 @@ interface DLMMStatCardProps {
   delay?: number;
 }
 
-export const DLMMStatCard = ({
+export const PoolStatCard = ({
   title,
   value,
   prefix = "",
@@ -32,7 +32,7 @@ export const DLMMStatCard = ({
   trend,
   gradient = "from-emerald-500 to-teal-500",
   delay = 0,
-}: DLMMStatCardProps) => {
+}: PoolStatCardProps) => {
   return (
     <motion.div
       initial={{ opacity: 0, y: 20 }}

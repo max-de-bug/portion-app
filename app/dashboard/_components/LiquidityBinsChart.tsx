@@ -3,7 +3,7 @@
 /**
  * Liquidity Bins Chart
  * 
- * Interactive SVG-based visualization of DLMM liquidity distribution
+ * Interactive SVG-based visualization of pool liquidity distribution
  * Shows price bins with liquidity depth and current price indicator
  */
 
