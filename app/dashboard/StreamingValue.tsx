@@ -13,7 +13,7 @@ import {
 import { useState } from "react";
 import { useSpendableYield, useSolomonYieldSync } from "@/app/hooks/useSolomonYield";
 import { usePrivy } from "@privy-io/react-auth";
-import { AgentChat } from "./AgentChat";
+
 import { ReceiveModal, WithdrawModal } from "./ActionModals";
 
 interface StreamingValueProps {

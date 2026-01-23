@@ -12,15 +12,15 @@ import { useSolomonAPY, useSolomonYieldSync, useRealtimeYield } from "@/app/hook
 import { usePrivy } from "@privy-io/react-auth";
 
 import { ReceiveModal, WithdrawModal } from "./ActionModals";
-import { AgentChat } from "./AgentChat";
 import { useState } from "react";
 import { useSpendableYield } from "@/app/hooks/useSolomonYield";
+import { useRouter } from "next/navigation";
 
 export default function Dashboard() {
   const { user } = usePrivy();
+  const router = useRouter();
   const { data: apyData, isLoading: apyLoading } = useSolomonAPY();
   
-  const [isSpendOpen, setIsSpendOpen] = useState(false);
   const [isReceiveOpen, setIsReceiveOpen] = useState(false);
   const [isWithdrawOpen, setIsWithdrawOpen] = useState(false);
 
@@ -67,7 +67,7 @@ export default function Dashboard() {
         <div className="col-span-2">
           <StreamingValue 
             walletAddress={walletAddress} 
-            onSpend={() => setIsSpendOpen(true)}
+            onSpend={() => router.push("/dashboard/ai")}
             onReceive={() => setIsReceiveOpen(true)}
             onWithdraw={() => setIsWithdrawOpen(true)}
           />
@@ -98,11 +98,6 @@ export default function Dashboard() {
       </div>
 
       {/* Modals - Rendered at root for best stacking context */}
-      <AgentChat
-        isOpen={isSpendOpen}
-        onClose={() => setIsSpendOpen(false)}
-        walletAddress={walletAddress}
-      />
       <ReceiveModal
         isOpen={isReceiveOpen}
         onClose={() => setIsReceiveOpen(false)}

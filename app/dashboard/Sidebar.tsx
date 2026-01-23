@@ -19,7 +19,7 @@ import { usePathname } from "next/navigation";
 import { usePrivy } from "@privy-io/react-auth";
 import { useSolomonYield } from "@/app/hooks/useSolomonYield";
 import { useX402Session } from "@/app/hooks/useX402Session";
-import { PrepaidBalance } from "@/components/PrepaidBalance";
+
 
 interface NavItem {
   icon: any;

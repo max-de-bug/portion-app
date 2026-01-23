@@ -57,7 +57,7 @@ export function useX402Session(walletAddress: string) {
    */
   useEffect(() => {
     if (!walletAddress) {
-      setState(prev => ({ ...prev, isLoading: false }));
+      setState(prev => ({ ...prev, isLoading: false, isAuthenticated: false, session: null }));
       return;
     }
 
@@ -69,6 +69,7 @@ export function useX402Session(walletAddress: string) {
         
         // Check if session is still valid
         if (expiresAt > new Date()) {
+          console.log(`[useX402Session] Restored valid session for ${walletAddress}`);
           setState({
             session: { ...parsed, expiresAt },
             isAuthenticated: true,
@@ -76,13 +77,21 @@ export function useX402Session(walletAddress: string) {
             error: null,
           });
           return;
+        } else {
+          console.log(`[useX402Session] Stored session expired for ${walletAddress}`);
+          localStorage.removeItem(`${SESSION_STORAGE_KEY}_${walletAddress}`);
         }
       }
     } catch (e) {
       console.error("[useX402Session] Failed to load stored session:", e);
     }
 
-    setState(prev => ({ ...prev, isLoading: false }));
+    setState({
+      session: null,
+      isAuthenticated: false,
+      isLoading: false,
+      error: null,
+    });
   }, [walletAddress]);
 
   /**

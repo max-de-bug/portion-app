@@ -11,12 +11,13 @@ import { useEffect, useState, useRef, useCallback } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useWallets, useSignAndSendTransaction } from "@privy-io/react-auth/solana";
 import { Connection, Transaction } from "@solana/web3.js";
+import { motion, AnimatePresence } from "framer-motion";
 import { AI_SERVICES, AIService } from "@/app/config/agent-services";
 import { useYieldStore } from "@/app/store/useYieldStore";
 import { useTransactionStore } from "@/app/store/useTransactionStore";
 import { useChatStore, Message } from "@/app/store/useChatStore";
 import { useX402Session } from "@/app/hooks/useX402Session";
-import { PrepaidBalance } from "@/components/PrepaidBalance";
+
 import { ConversationSidebar } from "@/app/dashboard/_components/ConversationSidebar";
 import { 
   Send, 
@@ -89,6 +90,7 @@ export default function PortionAIPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [showServiceSelector, setShowServiceSelector] = useState(false);
   const [showConversationSidebar, setShowConversationSidebar] = useState(true);
+  const [isSyncingSuccess, setIsSyncingSuccess] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
 
@@ -97,12 +99,12 @@ export default function PortionAIPage() {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   }, [messages.length, activeConversationId]);
 
-  // Focus input on mount and conversation switch
+  // Focus input on mount and sync success
   useEffect(() => {
-    if (isAuthenticated) {
+    if (isAuthenticated && !isSyncingSuccess) {
       inputRef.current?.focus();
     }
-  }, [activeConversationId, isAuthenticated]);
+  }, [activeConversationId, isAuthenticated, isSyncingSuccess]);
 
   const generateMessageId = () => 
     `msg-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
@@ -267,8 +269,18 @@ export default function PortionAIPage() {
     }
   };
 
+  const handleAuth = async () => {
+    const success = await authenticate();
+    if (success) {
+      setIsSyncingSuccess(true);
+      setTimeout(() => {
+        setIsSyncingSuccess(false);
+      }, 1500);
+    }
+  };
+
   return (
-    <div className="h-[calc(100vh-64px)] flex">
+    <div className="h-[calc(100vh-64px)] flex overflow-hidden">
       {/* Conversation Sidebar - ChatGPT Style */}
       <div 
         className={`border-r border-border bg-muted/30 transition-all duration-300 ${
@@ -371,44 +383,81 @@ export default function PortionAIPage() {
         {/* Messages */}
         <div className="flex-1 overflow-y-auto p-4 space-y-4 relative">
           {/* Authentication Overlay */}
-          {!isAuthenticated && (
-            <div className="absolute inset-0 z-40 bg-background/60 backdrop-blur-sm flex items-center justify-center p-6">
-              <div className="max-w-md w-full bg-background border border-border rounded-2xl shadow-2xl p-8 text-center animate-in fade-in zoom-in duration-300">
-                <div className="w-16 h-16 rounded-2xl bg-gradient-to-br from-purple-500 to-indigo-600 flex items-center justify-center mx-auto mb-6 shadow-xl shadow-purple-500/20">
-                  <Zap className="w-8 h-8 text-white" />
-                </div>
-                <h3 className="text-xl font-bold mb-2">Sync Your Session</h3>
-                <p className="text-muted-foreground text-sm mb-8 leading-relaxed">
-                  To interact with AI models using your yield, you need to prove wallet ownership. This is a one-time secure signature.
-                </p>
-                {sessionError && (
-                  <div className="mb-6 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-xs text-left">
-                    {sessionError}
-                  </div>
-                )}
-                <button
-                  onClick={authenticate}
-                  disabled={sessionLoading}
-                  className="w-full py-3 px-6 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+          <AnimatePresence>
+            {!isAuthenticated && (
+              <motion.div 
+                initial={{ opacity: 0 }}
+                animate={{ opacity: 1 }}
+                exit={{ opacity: 0 }}
+                className="absolute inset-0 z-40 bg-background/60 backdrop-blur-sm flex items-center justify-center p-6"
+              >
+                <motion.div 
+                  initial={{ opacity: 0, scale: 0.9, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                  exit={{ opacity: 0, scale: 0.9, y: 20 }}
+                  className="max-w-md w-full bg-background border border-border rounded-2xl shadow-2xl p-8 text-center"
                 >
-                  {sessionLoading ? (
-                    <>
-                      <Loader2 className="w-5 h-5 animate-spin" />
-                      <span>Syncing...</span>
-                    </>
-                  ) : (
-                    <>
-                      <Zap className="w-5 h-5 fill-current" />
-                      <span>Enable x402 AI Session</span>
-                    </>
+                  <div className={`w-16 h-16 rounded-2xl flex items-center justify-center mx-auto mb-6 shadow-xl transition-all duration-500 ${
+                    isSyncingSuccess 
+                      ? "bg-emerald-500 shadow-emerald-500/20 rotate-[360deg]" 
+                      : "bg-gradient-to-br from-purple-500 to-indigo-600 shadow-purple-500/20"
+                  }`}>
+                    {isSyncingSuccess ? (
+                      <CheckCircle2 className="w-8 h-8 text-white" />
+                    ) : (
+                      <Zap className="w-8 h-8 text-white" />
+                    )}
+                  </div>
+                  
+                  <h3 className="text-xl font-bold mb-2">
+                    {isSyncingSuccess ? "Session Synced!" : "Sync Your Session"}
+                  </h3>
+                  <p className="text-muted-foreground text-sm mb-8 leading-relaxed">
+                    {isSyncingSuccess 
+                      ? "Your x402 session is now active. You can start chatting using your yield."
+                      : "To interact with AI models using your yield, you need to prove wallet ownership. This is a one-time secure signature."}
+                  </p>
+
+                  {sessionError && (
+                    <div className="mb-6 p-3 rounded-lg bg-red-500/10 border border-red-500/20 text-red-500 text-xs text-left overflow-hidden text-ellipsis">
+                      {sessionError}
+                    </div>
                   )}
-                </button>
-                <p className="mt-4 text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
-                  Secure & Gasless Signature
-                </p>
-              </div>
-            </div>
-          )}
+
+                  {!isSyncingSuccess && (
+                    <button
+                      onClick={handleAuth}
+                      disabled={sessionLoading}
+                      className="w-full py-3 px-6 rounded-xl bg-gradient-to-r from-purple-500 to-indigo-600 text-white font-bold shadow-lg hover:shadow-xl hover:scale-[1.02] active:scale-[0.98] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                    >
+                      {sessionLoading ? (
+                        <>
+                          <Loader2 className="w-5 h-5 animate-spin" />
+                          <span>Syncing...</span>
+                        </>
+                      ) : (
+                        <>
+                          <Zap className="w-5 h-5 fill-current" />
+                          <span>Enable x402 AI Session</span>
+                        </>
+                      )}
+                    </button>
+                  )}
+                  
+                  {isSyncingSuccess && (
+                    <div className="flex items-center justify-center gap-2 text-emerald-500 font-bold py-3">
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <span className="text-sm">Initializing Chat...</span>
+                    </div>
+                  )}
+
+                  <p className="mt-4 text-[10px] text-muted-foreground uppercase tracking-widest font-bold">
+                    Secure & Gasless Signature
+                  </p>
+                </motion.div>
+              </motion.div>
+            )}
+          </AnimatePresence>
 
           {messages.length === 0 && (
             <div className="flex flex-col items-center justify-center h-full text-center">
@@ -509,22 +558,7 @@ export default function PortionAIPage() {
         </div>
       </div>
 
-      {/* Right Sidebar - Balance & Info */}
-      {isValidSolanaAddress && (
-        <div className="w-72 border-l border-border p-4 bg-muted/30 hidden xl:block">
-          <PrepaidBalance walletAddress={walletAddress} />
-          
-          <div className="mt-6 p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-teal-500/10 border border-emerald-500/20">
-            <h3 className="font-medium text-sm mb-2">About AI Models</h3>
-            <p className="text-xs text-muted-foreground leading-relaxed">
-              <strong>Cloud AI</strong> - Models like GPT-4, Claude-3 hosted on centralized infrastructure with fast response times.
-            </p>
-            <p className="text-xs text-muted-foreground leading-relaxed mt-2">
-              <strong>Decentralized AI</strong> - Coming soon: Run AI inference on decentralized networks for enhanced privacy.
-            </p>
-          </div>
-        </div>
-      )}
+
     </div>
   );
 }
