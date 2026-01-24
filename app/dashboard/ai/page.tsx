@@ -7,7 +7,7 @@
  * Features ChatGPT-style conversation tabs and AI service selection.
  */
 
-import { useEffect, useState, useRef, useCallback } from "react";
+import { useEffect, useState, useRef, useCallback, memo } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useWallets, useSignAndSendTransaction } from "@privy-io/react-auth/solana";
 import { Connection, Transaction } from "@solana/web3.js";
@@ -38,10 +38,114 @@ import {
 const BACKEND_URL = process.env.NEXT_PUBLIC_BACKEND_URL || "http://127.0.0.1:3001";
 const SOLANA_NETWORK = (process.env.NEXT_PUBLIC_SOLANA_NETWORK as "devnet" | "mainnet-beta") || "devnet";
 
-// Filter services to show only LLM-related ones
-const LLM_SERVICES = AI_SERVICES.filter(s => 
-  s.id.includes("gpt") || s.id.includes("claude") || s.id.includes("llama")
+// Filter services to show only relevant ones for the chat interface
+const RELEVANT_SERVICES = AI_SERVICES.filter(s => 
+  s.id.includes("gpt") || s.id.includes("claude") || s.id.includes("llama") || s.id === "solana-agent"
 );
+
+
+/** Model Selector Component */
+const ModelSelector = memo(({ 
+  current, 
+  onSelect,
+  isOpen,
+  onToggle,
+  onClose
+}: { 
+  current: AIService | null; 
+  onSelect: (s: AIService) => void;
+  isOpen: boolean;
+  onToggle: () => void;
+  onClose: () => void;
+}) => {
+  const containerRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (!isOpen) return;
+    const handleClickOutside = (e: MouseEvent) => {
+      if (containerRef.current && !containerRef.current.contains(e.target as Node)) {
+        onClose();
+      }
+    };
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, [isOpen, onClose]);
+
+  return (
+    <div className="relative" ref={containerRef}>
+      <button
+        type="button"
+        onClick={onToggle}
+        className={`flex items-center gap-2 px-4 py-2 rounded-lg border transition-all ${
+          isOpen ? "bg-emerald-50 border-emerald-200 text-emerald-900" : "bg-white border-zinc-200 text-zinc-700 hover:bg-zinc-50"
+        }`}
+      >
+        {current ? (
+          <div className="flex items-center gap-2">
+            <div className="w-2 h-2 rounded-full bg-emerald-500 shadow-[0_0_8px_rgba(16,185,129,0.5)]" />
+            <span className="text-sm font-extrabold tracking-tight">{current.name}</span>
+          </div>
+        ) : (
+          <div className="flex items-center gap-2">
+            <Brain className="w-4 h-4 text-zinc-400" />
+            <span className="text-sm font-bold text-zinc-500">Select Model</span>
+          </div>
+        )}
+        <ChevronDown className={`w-4 h-4 text-zinc-400 transition-transform duration-300 ${isOpen ? "rotate-180" : ""}`} />
+      </button>
+
+      <AnimatePresence>
+        {isOpen && (
+          <motion.div 
+            initial={{ opacity: 0, y: 10, scale: 0.95 }}
+            animate={{ opacity: 1, y: 0, scale: 1 }}
+            exit={{ opacity: 0, y: 10, scale: 0.95 }}
+            className="absolute right-0 top-full mt-2 w-72 bg-white border border-emerald-100 rounded-2xl shadow-[0_10px_40px_rgba(0,0,0,0.08)] z-[100] p-2 overflow-hidden ring-1 ring-emerald-500/5"
+          >
+            <div className="px-3 py-2 border-b border-emerald-50 mb-1 font-sans">
+              <p className="text-[10px] font-black text-emerald-900/40 uppercase tracking-widest leading-none">AI Intelligence Hub</p>
+            </div>
+            <div className="space-y-0.5 max-h-[400px] overflow-y-auto pr-1 flex flex-col custom-scrollbar">
+              {RELEVANT_SERVICES.map((service) => (
+                <button
+                  key={service.id}
+                  type="button"
+                  onClick={() => onSelect(service)}
+                  className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl text-left transition-all ${
+                    current?.id === service.id
+                      ? "bg-emerald-500 text-white shadow-lg shadow-emerald-500/20"
+                      : "hover:bg-emerald-50 group"
+                  }`}
+                >
+                  <div className={`w-10 h-10 rounded-xl flex items-center justify-center transition-colors shrink-0 ${
+                    current?.id === service.id
+                      ? "bg-white/20"
+                      : "bg-zinc-100 text-zinc-400 group-hover:bg-white group-hover:text-emerald-500 group-hover:shadow-sm"
+                  }`}>
+                    <service.icon className="w-5 h-5" />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <p className={`text-sm font-black tracking-tight ${current?.id === service.id ? "text-white" : "text-zinc-900"}`}>{service.name}</p>
+                    <p className={`text-[10px] font-bold truncate ${current?.id === service.id ? "text-white/70" : "text-zinc-400"}`}>
+                      {service.description}
+                    </p>
+                  </div>
+                  {current?.id === service.id && (
+                    <CheckCircle2 className="w-5 h-5 text-white" />
+                  )}
+                </button>
+              ))}
+            </div>
+            <div className="p-2 mt-1 bg-zinc-50 border-t border-emerald-50 -mx-2 -mb-2 text-center text-[9px] font-bold text-zinc-400 uppercase tracking-tight font-sans">
+              Transactions powered by sUSDV yield
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+    </div>
+  );
+});
+ModelSelector.displayName = "ModelSelector";
 
 export default function PortionAIPage() {
   const { user } = usePrivy();
@@ -61,16 +165,14 @@ export default function PortionAIPage() {
   const hasSubscription = useYieldStore((state) => state.hasSubscription);
   const addTransaction = useTransactionStore((state) => state.addTransaction);
   
-  const {
-    input,
-    addMessage: storeAddMessage,
-    updateMessage: storeUpdateMessage,
-    setInput,
-    setSelectedService,
-    getActiveMessages,
-    getSelectedService,
-    activeConversationId,
-  } = useChatStore();
+  const input = useChatStore((state) => state.input);
+  const setInput = useChatStore((state) => state.setInput);
+  const setSelectedService = useChatStore((state) => state.setSelectedService);
+  const getActiveMessages = useChatStore((state) => state.getActiveMessages);
+  const getSelectedService = useChatStore((state) => state.getSelectedService);
+  const activeConversationId = useChatStore((state) => state.activeConversationId);
+  const storeAddMessage = useChatStore((state) => state.addMessage);
+  const storeUpdateMessage = useChatStore((state) => state.updateMessage);
 
   // Get messages and selected service from active conversation
   const messages = getActiveMessages();
@@ -257,17 +359,17 @@ export default function PortionAIPage() {
     }
   };
 
-  const handleServiceSelect = (service: AIService) => {
+  const handleServiceSelect = useCallback((service: AIService) => {
     setSelectedService(service);
     setShowServiceSelector(false);
     if (isAuthenticated) {
       addMessage(
-        `${service.name} selected.\n\nCost: ${service.pricePerCall === 0 ? "Free" : `$${service.pricePerCall.toFixed(3)} per request`}\n\nStart typing your message below.`,
+        `${service.name} selected.\n\n${service.description}\n\nCost: ${service.pricePerCall === 0 ? "Free" : `$${service.pricePerCall.toFixed(3)} per request`}`,
         "assistant",
         { hasAnimated: false }
       );
     }
-  };
+  }, [setSelectedService, isAuthenticated, addMessage]);
 
   const handleAuth = async () => {
     const success = await authenticate();
@@ -293,7 +395,7 @@ export default function PortionAIPage() {
       {/* Main Chat Area */}
       <div className="flex-1 flex flex-col min-w-0">
         {/* Header */}
-        <div className="border-b border-border px-6 py-4 flex items-center justify-between bg-background/95 backdrop-blur shrink-0">
+        <div className="border-b border-border px-6 py-4 flex items-center justify-between bg-background/95 backdrop-blur shrink-0 z-50 relative">
           <div className="flex items-center gap-3">
             {/* Sidebar Toggle */}
             <button
@@ -323,61 +425,13 @@ export default function PortionAIPage() {
           </div>
           
           {/* Model Selector */}
-          <div className="relative">
-            <button
-              onClick={() => setShowServiceSelector(!showServiceSelector)}
-              className="flex items-center gap-2 px-4 py-2 rounded-lg border border-border bg-background hover:bg-muted transition-colors"
-            >
-              {selectedService ? (
-                <>
-                  <div className="w-2 h-2 rounded-full bg-emerald-500" />
-                  <span className="text-sm font-medium">{selectedService.name}</span>
-                </>
-              ) : (
-                <>
-                  <Brain className="w-4 h-4 text-muted-foreground" />
-                  <span className="text-sm text-muted-foreground">Select Model</span>
-                </>
-              )}
-              <ChevronDown className={`w-4 h-4 text-muted-foreground transition-transform ${showServiceSelector ? "rotate-180" : ""}`} />
-            </button>
-
-            {showServiceSelector && (
-              <div className="absolute right-0 top-full mt-2 w-72 bg-background border border-border rounded-xl shadow-lg z-50 p-2 animate-in fade-in zoom-in-95 duration-200">
-                <p className="px-3 py-2 text-xs font-medium text-muted-foreground uppercase">AI Models</p>
-                <div className="space-y-1">
-                  {LLM_SERVICES.map((service) => (
-                    <button
-                      key={service.id}
-                      onClick={() => handleServiceSelect(service)}
-                      className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-left transition-colors ${
-                        selectedService?.id === service.id
-                          ? "bg-emerald-500/10 text-emerald-600"
-                          : "hover:bg-muted"
-                      }`}
-                    >
-                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center ${
-                        selectedService?.id === service.id
-                          ? "bg-emerald-500/20"
-                          : "bg-muted"
-                      }`}>
-                        <Brain className="w-4 h-4" />
-                      </div>
-                      <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium truncate">{service.name}</p>
-                        <p className="text-xs text-muted-foreground">
-                          ${service.pricePerCall.toFixed(3)} per call
-                        </p>
-                      </div>
-                      {selectedService?.id === service.id && (
-                        <CheckCircle2 className="w-4 h-4 text-emerald-500" />
-                      )}
-                    </button>
-                  ))}
-                </div>
-              </div>
-            )}
-          </div>
+          <ModelSelector
+            current={selectedService}
+            onSelect={handleServiceSelect}
+            isOpen={showServiceSelector}
+            onToggle={() => setShowServiceSelector(!showServiceSelector)}
+            onClose={() => setShowServiceSelector(false)}
+          />
         </div>
 
         {/* Messages */}
