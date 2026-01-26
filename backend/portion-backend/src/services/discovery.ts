@@ -7,15 +7,15 @@
  * - Pricing information
  */
 
-import { db } from "../db";
-import { aiServices } from "../db/schema";
+import { db } from "../db/index.js";
+import { aiServices } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 import type {
   X402ServiceMetadata,
   ServiceDiscoveryFilters,
   ServiceDiscoveryResponse,
   PricingScheme,
-} from "../types/x402-v2";
+} from "../types/x402-v2.js";
 
 /**
  * Discover available services with optional filters

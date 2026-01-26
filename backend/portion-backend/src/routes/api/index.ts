@@ -1,8 +1,8 @@
 import { FastifyPluginAsync } from "fastify";
-import { getYieldInfo, fetchCurrentAPY, getSpendableYield } from "../../services/yield";
+import { getYieldInfo, fetchCurrentAPY, getSpendableYield } from "../../services/yield.js";
 
-import { getSolBalance, getTokenBalance, TOKEN_MINTS } from "../../services/solana";
-import { getAggregatedYields } from "../../services/yieldAggregator";
+import { getSolBalance, getTokenBalance, TOKEN_MINTS } from "../../services/solana.js";
+import { getAggregatedYields } from "../../services/yieldAggregator.js";
 
 /**
  * API Routes for Portion App

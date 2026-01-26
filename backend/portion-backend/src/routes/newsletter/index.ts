@@ -1,8 +1,8 @@
 import { FastifyPluginAsync } from "fastify";
-import { db } from "../../db";
-import { waitlist } from "../../db/schema";
+import { db } from "../../db/index.js";
+import { waitlist } from "../../db/schema.js";
 import { eq } from "drizzle-orm";
-import { sendWelcomeEmail } from "../../services/email";
+import { sendWelcomeEmail } from "../../services/email.js";
 
 const newsletterRoutes: FastifyPluginAsync = async (fastify) => {
   fastify.post<{

@@ -22,7 +22,7 @@ import {
   validateSession, 
   revokeSession,
   getActiveSessions 
-} from "../../services/session";
+} from "../../services/session.js";
 import { 
   getPrepaidBalance, 
   topupPrepaidBalance, 
@@ -30,19 +30,19 @@ import {
   refundPrepaidBalance,
   getPrepaidTransactions,
   hasSufficientPrepaidBalance 
-} from "../../services/prepaid";
+} from "../../services/prepaid.js";
 import { 
   discoverServices, 
   getServiceById, 
   getServiceCategories,
   getServicePricingSummary 
-} from "../../services/discovery";
-import { executeAIService } from "../../services/ai";
-import { getSpendableYield, getCachedYieldInfo } from "../../services/yield";
-import { aiServices, usageMetrics } from "../../db/schema";
-import { db } from "../../db";
+} from "../../services/discovery.js";
+import { executeAIService } from "../../services/ai.js";
+import { getSpendableYield, getCachedYieldInfo } from "../../services/yield.js";
+import { aiServices, usageMetrics } from "../../db/schema.js";
+import { db } from "../../db/index.js";
 import { eq } from "drizzle-orm";
-import type { SessionValidationResult } from "../../types/x402-v2";
+import type { SessionValidationResult } from "../../types/x402-v2.js";
 
 const NETWORK = (process.env.SOLANA_NETWORK || "devnet") as "mainnet" | "devnet";
 const TREASURY_ADDRESS = process.env.PORTION_TREASURY_ADDRESS || "PoRTn1WzKQVfBPGjC7LU1RVrS6NkYSkKuSWLKsmDorP";

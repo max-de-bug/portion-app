@@ -1,4 +1,4 @@
-import { fetchCurrentAPY } from "./yield";
+import { fetchCurrentAPY } from "./yield.js";
 
 interface YieldOpportunity {
   id: string;

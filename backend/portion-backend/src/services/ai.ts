@@ -1,6 +1,6 @@
 import "dotenv/config";
-import { getSpendableYield } from "./yield";
-import { createTransferTransaction } from "./solana";
+import { getSpendableYield } from "./yield.js";
+import { createTransferTransaction } from "./solana.js";
 
 const OPENAI_API_KEY = process.env.OPENAI_API_KEY;
 

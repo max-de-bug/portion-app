@@ -12,9 +12,6 @@
     }
   ],
   "rewrites": [
-    { "source": "/api/(.*)", "destination": "/api/index" },
-    { "source": "/x402/(.*)", "destination": "/api/index" },
-    { "source": "/newsletter/(.*)", "destination": "/api/index" },
     { "source": "/(.*)", "destination": "/api/index" }
   ]
 }

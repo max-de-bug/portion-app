@@ -11,15 +11,15 @@
 import { PublicKey } from "@solana/web3.js";
 import nacl from "tweetnacl";
 import bs58 from "bs58";
-import { db } from "../db";
-import { sessions, nonces } from "../db/schema";
+import { db } from "../db/index.js";
+import { sessions, nonces } from "../db/schema.js";
 import { eq, and, gt, isNull } from "drizzle-orm";
 import type { 
   X402Session, 
   SessionCreateRequest, 
   SessionCreateResponse,
   SessionValidationResult 
-} from "../types/x402-v2";
+} from "../types/x402-v2.js";
 
 // Configuration
 const SESSION_EXPIRY_HOURS = parseInt(process.env.SESSION_EXPIRY_HOURS || "24", 10);

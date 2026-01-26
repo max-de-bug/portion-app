@@ -1,4 +1,4 @@
-import { getTokenBalance, TOKEN_MINTS } from "./solana";
+import { getTokenBalance, TOKEN_MINTS } from "./solana.js";
 
 // Current Solomon Labs APY (fetched from API or config)
 const CURRENT_APY = 10.3; // 10.3% as of late 2025

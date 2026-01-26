@@ -8,8 +8,8 @@
  * - Transaction history
  */
 
-import { db } from "../db";
-import { prepaidBalances, prepaidTransactions, aiServices } from "../db/schema";
+import { db } from "../db/index.js";
+import { prepaidBalances, prepaidTransactions, aiServices } from "../db/schema.js";
 import { eq } from "drizzle-orm";
 import type {
   PrepaidBalance,
@@ -17,7 +17,7 @@ import type {
   PrepaidTopupResponse,
   PrepaidDeductionResult,
   PrepaidTransaction,
-} from "../types/x402-v2";
+} from "../types/x402-v2.js";
 
 /**
  * Generate a unique transaction ID
