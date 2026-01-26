@@ -1,5 +1,5 @@
 import Fastify from "fastify";
-import app from "../dist/src/app.js";
+import app from "../src/app.js";
 
 const fastify = Fastify({
   logger: true,
