@@ -49,6 +49,7 @@ const startPromise = (async () => {
       "Authorization",
       "X-Payment",
       "X-Subscription",
+      "X-Session-Token",
     ],
     credentials: true,
   });

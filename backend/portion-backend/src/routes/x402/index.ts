@@ -78,7 +78,7 @@ async function validateSessionToken(token: string | undefined): Promise<SessionV
   return await validateSession(token);
 }
 
-const x402Plugin: FastifyPluginAsync = async (fastify): Promise<void> => {
+const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
   // ============================================
   // Health & Info
   // ============================================
