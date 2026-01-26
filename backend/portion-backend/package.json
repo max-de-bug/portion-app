@@ -38,6 +38,7 @@
     "fastify-cli": "^7.4.1",
     "fastify-plugin": "^5.0.0",
     "postgres": "^3.4.0",
+    "resend": "^6.8.0",
     "tweetnacl": "^1.0.3"
   },
   "devDependencies": {
