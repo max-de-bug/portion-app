@@ -110,16 +110,38 @@ export const Header = () => {
       console.log("[Header] Initiating wallet login...");
       await login();
       console.log("[Header] Login successful");
-    } catch (error) {
-      console.error("[Header] Login error:", error);
-      // Privy will show its own error UI, but log for debugging
-      if (error instanceof Error) {
-        console.error("[Header] Error details:", {
-          message: error.message,
-          name: error.name,
-          stack: error.stack,
-        });
+    } catch (error: any) {
+      console.error("[Header] Login error detected:", error);
+
+      // Check for common errors and provide helpful messages (moved from PrivyErrorHandler)
+      if (
+        error?.message?.includes("403") ||
+        error?.message?.includes("Forbidden")
+      ) {
+        console.error(
+          "[Header] 403 Forbidden Error Detected!\n" +
+            "This usually means your domain is not whitelisted in Privy dashboard.\n" +
+            "Please see PRIVY_SETUP.md for instructions on how to fix this."
+        );
       }
+
+      if (error?.message?.includes("siws/init")) {
+        console.error(
+          "[Header] SIWS initialization error.\n" +
+            "Check that:\n" +
+            "1. Domain is whitelisted in Privy dashboard\n" +
+            "2. App ID is correct\n" +
+            "3. Solana is enabled for your app\n" +
+            "See PRIVY_SETUP.md for detailed setup instructions."
+        );
+      }
+
+      // Privy will show its own error UI, but log for debugging
+      console.error("[Header] Error details:", {
+        message: error?.message,
+        name: error?.name,
+        stack: error?.stack,
+      });
     }
   };
 
