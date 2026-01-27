@@ -514,7 +514,10 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
    * Prepare a payment for an AI service
    */
   fastify.post<{
-    Headers: { "x-session-token"?: string };
+    Headers: { 
+      "authorization"?: string;
+      "x-session-token"?: string;
+    };
     Body: {
       service: string;
       walletAddress: string;
@@ -522,7 +525,18 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
       inputData?: string;
     };
   }>("/prepare", async (request, reply) => {
+    console.log(`[X402] Prepare request: ${JSON.stringify(request.body)}`);
     const { service, walletAddress, usePrepaid = false } = request.body;
+
+    if (!service || !walletAddress || walletAddress === "") {
+      console.warn(`[X402] Missing parameters in /prepare: service=${service}, wallet=${walletAddress}`);
+      return reply.status(400).send({ 
+        error: "Missing parameters", 
+        message: "Wallet address and service ID are required.",
+        required: ["service", "walletAddress"] 
+      });
+    }
+
     const sToken = getSessionToken(request);
 
     // Session validation (optional for backward compatibility)
@@ -541,12 +555,14 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
       .limit(1);
 
     if (!serviceInfo) {
+      console.warn(`[X402] Service not found in DB: ${service}`);
       const allServices = await db
         .select({ id: aiServices.id })
         .from(aiServices)
         .where(eq(aiServices.isActive, true));
       return reply.status(400).send({
         error: "Unknown service",
+        requested: service,
         availableServices: allServices.map((s) => s.id),
       });
     }
@@ -697,7 +713,9 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
   fastify.post<{
     Params: { service: string };
     Headers: {
+      "authorization"?: string;
       "x-session-token"?: string;
+      "payment-signature"?: string;
       "x-payment"?: string;
       "x-subscription"?: string;
     };
