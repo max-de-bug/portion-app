@@ -182,18 +182,16 @@ export const ConversationSidebar = ({ className = "" }: ConversationSidebarProps
                           >
                             <Edit3 className="w-3 h-3 text-muted-foreground" />
                           </button>
-                          {conversations.length > 1 && (
-                            <button
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                deleteConversation(conv.id);
-                              }}
-                              className="p-1 hover:bg-destructive/20 rounded"
-                              title="Delete"
-                            >
-                              <Trash2 className="w-3 h-3 text-destructive" />
-                            </button>
-                          )}
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              deleteConversation(conv.id);
+                            }}
+                            className="p-1 hover:bg-destructive/20 rounded"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-3 h-3 text-destructive" />
+                          </button>
                         </div>
                       </>
                     )}
