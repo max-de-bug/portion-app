@@ -107,7 +107,7 @@ export function useX402Session(walletAddress: string) {
       if (!state.isAuthenticated || !state.session) return null;
       
       const res = await fetch(`${BACKEND_URL}/x402/prepaid/balance`, {
-        headers: { "X-Session-Token": state.session.sessionToken },
+        headers: { "Authorization": `Bearer ${state.session.sessionToken}` },
       });
       
       if (!res.ok) throw new Error("Failed to fetch balance");
@@ -241,7 +241,7 @@ export function useX402Session(walletAddress: string) {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Session-Token": state.session.sessionToken,
+          "Authorization": `Bearer ${state.session.sessionToken}`,
         },
         body: JSON.stringify({ amount, paymentTx }),
       });
@@ -267,7 +267,7 @@ export function useX402Session(walletAddress: string) {
       try {
         await fetch(`${BACKEND_URL}/x402/auth/revoke`, {
           method: "POST",
-          headers: { "X-Session-Token": state.session.sessionToken },
+          headers: { "Authorization": `Bearer ${state.session.sessionToken}` },
         });
       } catch (e) {
         console.error("[useX402Session] Failed to revoke session:", e);

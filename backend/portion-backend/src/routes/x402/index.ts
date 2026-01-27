@@ -1,9 +1,9 @@
 /**
  * Unified X402 Protocol Routes
- * 
+ *
  * Consolidates X402 V1 and V2 into a single, comprehensive route handler.
  * V2 is now the default - all endpoints support session-based auth and prepaid.
- * 
+ *
  * Features:
  * - Session-based authentication (GET /nonce, POST /auth)
  * - Service discovery (GET /discover, GET /service/:id)
@@ -16,62 +16,91 @@
 
 import { FastifyPluginAsync } from "fastify";
 import { PublicKey } from "@solana/web3.js";
-import { 
-  createNonce, 
-  createSession, 
-  validateSession, 
+import {
+  createNonce,
+  createSession,
+  validateSession,
   revokeSession,
-  getActiveSessions 
+  getActiveSessions,
 } from "../../services/session.js";
-import { 
-  getPrepaidBalance, 
-  topupPrepaidBalance, 
+import {
+  getPrepaidBalance,
+  topupPrepaidBalance,
   deductPrepaidBalance,
   refundPrepaidBalance,
   getPrepaidTransactions,
-  hasSufficientPrepaidBalance 
+  hasSufficientPrepaidBalance,
 } from "../../services/prepaid.js";
-import { 
-  discoverServices, 
-  getServiceById, 
+import {
+  discoverServices,
+  getServiceById,
   getServiceCategories,
-  getServicePricingSummary 
+  getServicePricingSummary,
 } from "../../services/discovery.js";
 import { executeAIService } from "../../services/ai.js";
 import { getSpendableYield, getCachedYieldInfo } from "../../services/yield.js";
 import { aiServices, usageMetrics } from "../../db/schema.js";
 import { db } from "../../db/index.js";
 import { eq } from "drizzle-orm";
-import type { SessionValidationResult } from "../../types/x402-v2.js";
+import {
+  X402_HEADERS,
+  X402VERSION,
+  type SessionValidationResult,
+  type PaymentRequiredResponseV2,
+} from "../../types/x402-v2.js";
 
-const NETWORK = (process.env.SOLANA_NETWORK || "devnet") as "mainnet" | "devnet";
-const TREASURY_ADDRESS = process.env.PORTION_TREASURY_ADDRESS || "PoRTn1WzKQVfBPGjC7LU1RVrS6NkYSkKuSWLKsmDorP";
+const NETWORK = (process.env.SOLANA_NETWORK || "devnet") as
+  | "mainnet"
+  | "devnet";
+const TREASURY_ADDRESS =
+  process.env.PORTION_TREASURY_ADDRESS ||
+  "PoRTn1WzKQVfBPGjC7LU1RVrS6NkYSkKuSWLKsmDorP";
 const X402_VERSION = 2;
 
 // Payment allocation store
 const verifiedPayments = new Map<
   string,
-  { 
-    amount: number; 
-    basePrice: number; 
-    platformFee: number; 
+  {
+    amount: number;
+    basePrice: number;
+    platformFee: number;
     isSubscription: boolean;
-    paymentMethod: 'yield' | 'prepaid' | 'subscription';
-    service: string; 
-    timestamp: Date 
+    paymentMethod: "yield" | "prepaid" | "subscription";
+    service: string;
+    timestamp: Date;
   }
 >();
-const yieldAllocations = new Map<string, { 
-  wallet: string; 
-  amount: number; 
-  usePrepaid: boolean;
-  expiresAt: Date 
-}>();
+const yieldAllocations = new Map<
+  string,
+  {
+    wallet: string;
+    amount: number;
+    usePrepaid: boolean;
+    expiresAt: Date;
+  }
+>();
+
+/**
+ * Helper to extract session token from headers (supports V2 and legacy V1)
+ */
+function getSessionToken(request: any): string | undefined {
+  // V2 format: Authorization: Bearer <token>
+  const authHeader = request.headers[X402_HEADERS.AUTHORIZATION];
+  if (authHeader && typeof authHeader === "string" && authHeader.startsWith("Bearer ")) {
+    return authHeader.slice(7);
+  }
+
+  // Legacy V1 format: X-Session-Token
+  return request.headers[X402_HEADERS.X_SESSION_TOKEN] as string | undefined;
+}
 
 /**
  * Session validation helper
  */
-async function validateSessionToken(token: string | undefined): Promise<SessionValidationResult> {
+async function validateRequestSession(
+  request: any,
+): Promise<SessionValidationResult> {
+  const token = getSessionToken(request);
   if (!token) {
     return { valid: false, error: "Missing session token" };
   }
@@ -114,14 +143,24 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
       return reply.status(400).send({ error: "Invalid wallet address" });
     }
 
-    const nonce = await createNonce(walletAddress);
-    const message = `Sign this message to authenticate with Solomon App\n\nWallet: ${walletAddress}\nNonce: ${nonce}\nTimestamp: ${new Date().toISOString()}`;
+    try {
+      const nonce = await createNonce(walletAddress);
+      const message = `Sign this message to authenticate with Solomon App\n\nWallet: ${walletAddress}\nNonce: ${nonce}\nTimestamp: ${new Date().toISOString()}`;
 
-    return reply.send({
-      nonce,
-      message,
-      expiresIn: 600,
-    });
+      return reply.send({
+        x402Version: X402VERSION,
+        nonce,
+        message,
+        expiresIn: 600,
+      });
+    } catch (error) {
+      console.error("[X402] Nonce creation failed:", error);
+      const message = error instanceof Error ? error.message : "Unknown error";
+      return reply.status(503).send({
+        error: "Nonce service unavailable",
+        details: message,
+      });
+    }
   });
 
   /**
@@ -138,8 +177,8 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
     const { walletAddress, signature, message } = request.body;
 
     if (!walletAddress || !signature || !message) {
-      return reply.status(400).send({ 
-        error: "Missing required fields: walletAddress, signature, message" 
+      return reply.status(400).send({
+        error: "Missing required fields: walletAddress, signature, message",
       });
     }
 
@@ -157,6 +196,7 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
 
     return reply.send({
       success: true,
+      x402Version: X402VERSION,
       sessionToken: result.sessionToken,
       expiresAt: result.expiresAt,
       walletAddress: result.walletAddress,
@@ -170,11 +210,12 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
   fastify.post<{
     Headers: { "x-session-token"?: string };
   }>("/auth/revoke", async (request, reply) => {
-    const sessionToken = request.headers["x-session-token"];
-    const validation = await validateSessionToken(sessionToken);
+    const validation = await validateRequestSession(request);
 
     if (!validation.valid || !validation.session) {
-      return reply.status(401).send({ error: validation.error || "Invalid session" });
+      return reply
+        .status(401)
+        .send({ error: validation.error || "Invalid session" });
     }
 
     await revokeSession(validation.session.sessionId);
@@ -189,18 +230,19 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
   fastify.get<{
     Headers: { "x-session-token"?: string };
   }>("/auth/sessions", async (request, reply) => {
-    const sessionToken = request.headers["x-session-token"];
-    const validation = await validateSessionToken(sessionToken);
+    const validation = await validateRequestSession(request);
 
     if (!validation.valid || !validation.session) {
-      return reply.status(401).send({ error: validation.error || "Invalid session" });
+      return reply
+        .status(401)
+        .send({ error: validation.error || "Invalid session" });
     }
 
     const sessions = await getActiveSessions(validation.session.walletAddress);
 
     return reply.send({
       walletAddress: validation.session.walletAddress,
-      sessions: sessions.map(s => ({
+      sessions: sessions.map((s) => ({
         sessionId: s.sessionId,
         createdAt: s.createdAt,
         expiresAt: s.expiresAt,
@@ -235,11 +277,11 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
     const result = await discoverServices(filters);
 
     return reply.send({
-      version: X402_VERSION,
-      network: NETWORK,
+      networkId: `solana:${NETWORK}`,
       paymentMethod: "x402",
       acceptedTokens: ["SOL", "sUSDV-yield", "prepaid-USD"],
       ...result,
+      version: X402VERSION,
     });
   });
 
@@ -262,9 +304,9 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
     const result = await discoverServices(filters);
 
     return reply.send({
-      version: X402_VERSION,
-      network: NETWORK,
+      networkId: `solana:${NETWORK}`,
       ...result,
+      version: X402VERSION,
     });
   });
 
@@ -310,11 +352,12 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
   fastify.get<{
     Headers: { "x-session-token"?: string };
   }>("/prepaid/balance", async (request, reply) => {
-    const sessionToken = request.headers["x-session-token"];
-    const validation = await validateSessionToken(sessionToken);
+    const validation = await validateRequestSession(request);
 
     if (!validation.valid || !validation.session) {
-      return reply.status(401).send({ error: validation.error || "Invalid session" });
+      return reply
+        .status(401)
+        .send({ error: validation.error || "Invalid session" });
     }
 
     const balance = await getPrepaidBalance(validation.session.walletAddress);
@@ -337,11 +380,12 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
       paymentTx: string;
     };
   }>("/prepaid/topup", async (request, reply) => {
-    const sessionToken = request.headers["x-session-token"];
-    const validation = await validateSessionToken(sessionToken);
+    const validation = await validateRequestSession(request);
 
     if (!validation.valid || !validation.session) {
-      return reply.status(401).send({ error: validation.error || "Invalid session" });
+      return reply
+        .status(401)
+        .send({ error: validation.error || "Invalid session" });
     }
 
     const { amount, paymentTx } = request.body;
@@ -351,7 +395,9 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
     }
 
     if (!paymentTx) {
-      return reply.status(400).send({ error: "Payment transaction signature required" });
+      return reply
+        .status(400)
+        .send({ error: "Payment transaction signature required" });
     }
 
     try {
@@ -377,17 +423,18 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
     Headers: { "x-session-token"?: string };
     Querystring: { limit?: string };
   }>("/prepaid/transactions", async (request, reply) => {
-    const sessionToken = request.headers["x-session-token"];
-    const validation = await validateSessionToken(sessionToken);
+    const validation = await validateRequestSession(request);
 
     if (!validation.valid || !validation.session) {
-      return reply.status(401).send({ error: validation.error || "Invalid session" });
+      return reply
+        .status(401)
+        .send({ error: validation.error || "Invalid session" });
     }
 
     const limit = request.query.limit ? parseInt(request.query.limit, 10) : 20;
     const transactions = await getPrepaidTransactions(
       validation.session.walletAddress,
-      Math.min(limit, 100)
+      Math.min(limit, 100),
     );
 
     return reply.send({
@@ -404,16 +451,17 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
     Headers: { "x-session-token"?: string };
     Params: { serviceId: string };
   }>("/prepaid/check/:serviceId", async (request, reply) => {
-    const sessionToken = request.headers["x-session-token"];
-    const validation = await validateSessionToken(sessionToken);
+    const validation = await validateRequestSession(request);
 
     if (!validation.valid || !validation.session) {
-      return reply.status(401).send({ error: validation.error || "Invalid session" });
+      return reply
+        .status(401)
+        .send({ error: validation.error || "Invalid session" });
     }
 
     const result = await hasSufficientPrepaidBalance(
       validation.session.walletAddress,
-      request.params.serviceId
+      request.params.serviceId,
     );
 
     return reply.send({
@@ -475,13 +523,13 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
     };
   }>("/prepare", async (request, reply) => {
     const { service, walletAddress, usePrepaid = false } = request.body;
-    const sessionToken = request.headers["x-session-token"];
+    const sToken = getSessionToken(request);
 
     // Session validation (optional for backward compatibility)
     let sessionValid = false;
     let sessionInfo: SessionValidationResult | null = null;
-    if (sessionToken) {
-      sessionInfo = await validateSessionToken(sessionToken);
+    if (sToken) {
+      sessionInfo = await validateRequestSession(request);
       sessionValid = sessionInfo.valid;
     }
 
@@ -493,10 +541,13 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
       .limit(1);
 
     if (!serviceInfo) {
-      const allServices = await db.select({ id: aiServices.id }).from(aiServices).where(eq(aiServices.isActive, true));
-      return reply.status(400).send({ 
+      const allServices = await db
+        .select({ id: aiServices.id })
+        .from(aiServices)
+        .where(eq(aiServices.isActive, true));
+      return reply.status(400).send({
         error: "Unknown service",
-        availableServices: allServices.map(s => s.id),
+        availableServices: allServices.map((s) => s.id),
       });
     }
 
@@ -506,11 +557,14 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
 
     // Check prepaid balance if requested
     if (usePrepaid) {
-      const prepaidCheck = await hasSufficientPrepaidBalance(walletAddress, service);
-      
+      const prepaidCheck = await hasSufficientPrepaidBalance(
+        walletAddress,
+        service,
+      );
+
       if (prepaidCheck.sufficient) {
         const paymentId = `pay-${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
-        
+
         yieldAllocations.set(paymentId, {
           wallet: walletAddress,
           amount: parseFloat(prepaidCheck.required),
@@ -534,11 +588,14 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
             required: prepaidCheck.required,
             discount: prepaidCheck.discountApplied,
           },
-          session: sessionValid ? {
-            authenticated: true,
-            expiresAt: sessionInfo?.session?.expiresAt,
-          } : null,
-          instructions: "Call /x402/execute/:service with paymentId and usePrepaid=true",
+          session: sessionValid
+            ? {
+                authenticated: true,
+                expiresAt: sessionInfo?.session?.expiresAt,
+              }
+            : null,
+          instructions:
+            "Call /x402/execute/:service with paymentId and usePrepaid=true",
         });
       }
     }
@@ -546,7 +603,7 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
     // Fall back to yield-based payment
     const cachedInfo = getCachedYieldInfo(walletAddress);
     let spendableYield = 0;
-    
+
     if (cachedInfo) {
       spendableYield = cachedInfo.claimableYield + cachedInfo.pendingYield;
     } else {
@@ -555,7 +612,7 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
 
     if (spendableYield < totalPrice) {
       const prepaidBalance = await getPrepaidBalance(walletAddress);
-      
+
       return reply.status(402).send({
         error: "Insufficient balance",
         required: totalPrice,
@@ -566,9 +623,10 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
         prepaid: {
           balance: prepaidBalance.balance,
           sufficient: parseFloat(prepaidBalance.balance) >= totalPrice,
-          hint: parseFloat(prepaidBalance.balance) >= totalPrice 
-            ? "Set usePrepaid=true to use prepaid balance" 
-            : "Top up prepaid balance via POST /x402/prepaid/topup",
+          hint:
+            parseFloat(prepaidBalance.balance) >= totalPrice
+              ? "Set usePrepaid=true to use prepaid balance"
+              : "Top up prepaid balance via POST /x402/prepaid/topup",
         },
         session: sessionValid,
       });
@@ -583,36 +641,52 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
       expiresAt: new Date(Date.now() + 5 * 60 * 1000),
     });
 
+    // V2 Compliance: Structured 402 Response
+    const paymentResponse: PaymentRequiredResponseV2 = {
+      x402Version: 2,
+      resource: `/x402/execute/${service}`,
+      accepts: [
+        {
+          scheme: "exact",
+          network: `solana:${NETWORK}`,
+          maxAmountRequired: Math.ceil(totalPrice * 1e6).toString(),
+          resource: `/x402/execute/${service}`,
+          description: serviceInfo.description || "",
+          payTo: TREASURY_ADDRESS,
+          maxTimeoutSeconds: 300,
+        },
+        {
+          scheme: "prepaid",
+          network: `solana:${NETWORK}`,
+          maxAmountRequired: totalPrice.toString(),
+          resource: `/x402/execute/${service}`,
+          description: "Pay using your Portion prepaid balance",
+          payTo: TREASURY_ADDRESS,
+          maxTimeoutSeconds: 300,
+          extra: {
+            currentBalance: spendableYield.toString(),
+            discount: 0,
+          },
+        },
+      ],
+    };
+
     return reply.status(402).send({
+      ...paymentResponse,
       status: 402,
       message: "Payment Required",
       paymentId,
-      paymentMethod: "yield",
-      requirements: {
-        scheme: "exact",
-        network: `solana:${NETWORK}`,
-        maxAmountRequired: Math.ceil(totalPrice * 1e6).toString(),
-        resource: `/x402/execute/${service}`,
-        description: serviceInfo.description,
-        payTo: TREASURY_ADDRESS,
-        maxTimeoutSeconds: 300,
-        acceptsPrepaid: true,
-      },
-      service: {
-        id: service,
-        price: basePrice,
-        platformFee,
-      },
       yield: {
         available: spendableYield,
         required: totalPrice,
         remaining: spendableYield - totalPrice,
       },
-      session: sessionValid ? {
-        authenticated: true,
-        expiresAt: sessionInfo?.session?.expiresAt,
-      } : null,
-      instructions: "Sign the payment authorization and call /x402/execute with X-Payment header",
+      session: sessionValid
+        ? {
+            authenticated: true,
+            expiresAt: sessionInfo?.session?.expiresAt,
+          }
+        : null,
     });
   });
 
@@ -622,7 +696,7 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
    */
   fastify.post<{
     Params: { service: string };
-    Headers: { 
+    Headers: {
       "x-session-token"?: string;
       "x-payment"?: string;
       "x-subscription"?: string;
@@ -635,15 +709,30 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
     };
   }>("/execute/:service", async (request, reply) => {
     const { service } = request.params;
-    const { input, paymentId, walletAddress, usePrepaid = false } = request.body;
-    const sessionToken = request.headers["x-session-token"];
-    const isSubscription = request.headers["x-subscription"] === "active";
+    const {
+      input,
+      paymentId,
+      walletAddress,
+      usePrepaid = false,
+    } = request.body;
+    // V2 Compliance: Check PAYMENT-SIGNATURE or legacy x-payment
+    const paymentSignature = request.headers[X402_HEADERS.PAYMENT_SIGNATURE] || request.headers[X402_HEADERS.X_PAYMENT];
+    
+    if (paymentSignature) {
+      console.log(`[X402] Received payment signature: ${paymentSignature.slice(0, 10)}...`);
+    }
 
+    const sessionToken = getSessionToken(request);
+    
     // Validate session if provided
     let sessionInfo: SessionValidationResult | null = null;
     if (sessionToken) {
-      sessionInfo = await validateSessionToken(sessionToken);
+      sessionInfo = await validateSession(sessionToken);
     }
+    
+    // Check if subscription is active (V2 header or legacy)
+    const isSubscription = request.headers[X402_HEADERS.AUTHORIZATION]?.includes("subscription") || 
+                          request.headers["x-subscription"] === "active";
 
     // Get service info
     const [serviceInfo] = await db
@@ -679,38 +768,47 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
     const basePrice = parseFloat(serviceInfo.price);
     const platformFee = parseFloat(serviceInfo.platformFee);
     const totalCost = isSubscription ? 0 : allocation.amount;
-    let paymentMethod: 'prepaid' | 'yield' | 'subscription' = 'yield';
+    let paymentMethod: "prepaid" | "yield" | "subscription" = "yield";
 
     // Handle prepaid deduction
     if (usePrepaid || allocation.usePrepaid) {
-      const deductResult = await deductPrepaidBalance(walletAddress, totalCost, service);
-      
+      const deductResult = await deductPrepaidBalance(
+        walletAddress,
+        totalCost,
+        service,
+      );
+
       if (!deductResult.success) {
         return reply.status(402).send({
           error: "Prepaid deduction failed",
           message: deductResult.error,
         });
       }
-      
-      paymentMethod = 'prepaid';
+
+      paymentMethod = "prepaid";
     } else if (isSubscription) {
-      paymentMethod = 'subscription';
+      paymentMethod = "subscription";
     }
 
     // Execute AI service
     let result;
     try {
-      result = await executeAIService(service, input, walletAddress, isSubscription);
+      result = await executeAIService(
+        service,
+        input,
+        walletAddress,
+        isSubscription,
+      );
     } catch (error) {
       // Refund on failure
-      if (paymentMethod === 'prepaid') {
+      if (paymentMethod === "prepaid") {
         await refundPrepaidBalance(walletAddress, totalCost, service);
       }
-      
+
       return reply.status(500).send({
         error: "Service execution failed",
         message: error instanceof Error ? error.message : "Unknown error",
-        refunded: paymentMethod === 'prepaid',
+        refunded: paymentMethod === "prepaid",
       });
     }
 
@@ -736,9 +834,19 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
       sessionId: sessionInfo?.session?.sessionId,
     });
 
+    // V2 Compliance: Add PAYMENT-RESPONSE header
+    const settlementResponse = {
+      success: true,
+      paymentId,
+      status: "settled",
+      timestamp: new Date().toISOString(),
+    };
+    
+    reply.header(X402_HEADERS.PAYMENT_RESPONSE, Buffer.from(JSON.stringify(settlementResponse)).toString('base64'));
+
     return reply.send({
       success: true,
-      version: X402_VERSION,
+      x402Version: X402VERSION,
       paymentId,
       service,
       cost: totalCost,
@@ -748,17 +856,22 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
         amount: totalCost,
         base: basePrice,
         fee: platformFee,
-        currency: paymentMethod === 'prepaid' ? "USD (prepaid)" : 
-                  paymentMethod === 'subscription' ? "USD (subscription)" :
-                  "USD (from sUSDV yield)",
+        currency:
+          paymentMethod === "prepaid"
+            ? "USD (prepaid)"
+            : paymentMethod === "subscription"
+              ? "USD (subscription)"
+              : "USD (from sUSDV yield)",
         timestamp: new Date().toISOString(),
-        network: NETWORK,
+        network: `solana:${NETWORK}`,
       },
       result,
-      session: sessionInfo?.valid ? {
-        walletAddress: sessionInfo.session?.walletAddress,
-        expiresAt: sessionInfo.session?.expiresAt,
-      } : null,
+      session: sessionInfo?.valid
+        ? {
+            walletAddress: sessionInfo.session?.walletAddress,
+            expiresAt: sessionInfo.session?.expiresAt,
+          }
+        : null,
     });
   });
 
@@ -802,29 +915,40 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
     Body: { walletAddress: string; amount?: number; currency?: string };
   }>("/faucet", async (request, reply) => {
     const { walletAddress, amount = 10, currency = "USDV" } = request.body;
-    
+
     try {
-      const { sendTokensFromTreasury, TOKEN_MINTS } = await import("../../services/solana.js");
-      
-      const mint = currency === "USDV" ? TOKEN_MINTS.USDV : 
-                   currency === "USDC" ? TOKEN_MINTS.USDC : 
-                   undefined;
+      const { sendTokensFromTreasury, TOKEN_MINTS } =
+        await import("../../services/solana.js");
+
+      const mint =
+        currency === "USDV"
+          ? TOKEN_MINTS.USDV
+          : currency === "USDC"
+            ? TOKEN_MINTS.USDC
+            : undefined;
 
       console.log(`[Faucet] Sending ${amount} ${currency} to ${walletAddress}`);
-      
-      const signature = await sendTokensFromTreasury(walletAddress, amount, mint);
-      
+
+      const signature = await sendTokensFromTreasury(
+        walletAddress,
+        amount,
+        mint,
+      );
+
       return reply.send({
         success: true,
         signature,
         message: `Successfully sent ${amount} ${currency} to ${walletAddress}`,
-        explorerUrl: `https://solscan.io/tx/${signature}?cluster=devnet`
+        explorerUrl: `https://solscan.io/tx/${signature}?cluster=devnet`,
       });
     } catch (error) {
       console.error("[Faucet Error]", error);
       return reply.status(500).send({
         error: "Faucet failed",
-        message: error instanceof Error ? error.message : "Wait for airdrop quota or check treasury"
+        message:
+          error instanceof Error
+            ? error.message
+            : "Wait for airdrop quota or check treasury",
       });
     }
   });

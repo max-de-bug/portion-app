@@ -10,7 +10,6 @@
 import { useEffect, useState, useRef, useCallback, memo } from "react";
 import { usePrivy } from "@privy-io/react-auth";
 import { useWallets, useSignAndSendTransaction } from "@privy-io/react-auth/solana";
-import { Connection, Transaction } from "@solana/web3.js";
 import { motion, AnimatePresence } from "framer-motion";
 import { AI_SERVICES, AIService } from "@/app/config/agent-services";
 import { useYieldStore } from "@/app/store/useYieldStore";
@@ -260,7 +259,7 @@ export default function PortionAIPage() {
         method: "POST",
         headers: { 
           "Content-Type": "application/json",
-          ...(getSessionToken() && { "X-Session-Token": getSessionToken()! }),
+          ...(getSessionToken() && { "Authorization": `Bearer ${getSessionToken()}` }),
         },
         body: JSON.stringify({
           service: service.id,
@@ -282,9 +281,8 @@ export default function PortionAIPage() {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          "X-Payment": "yield-authorized",
-          "X-Subscription": hasSubscription ? "active" : "none",
-          ...(getSessionToken() && { "X-Session-Token": getSessionToken()! }),
+          "payment-signature": "yield-authorized",
+          ...(getSessionToken() && { "Authorization": `Bearer ${getSessionToken()}` }),
         },
         body: JSON.stringify({
           input: userInput,

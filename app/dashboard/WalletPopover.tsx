@@ -74,7 +74,7 @@ export const WalletPopover = () => {
   const toggleOpen = () => setIsOpen(!isOpen);
 
   return (
-    <div className="relative z-50">
+    <div className="relative z-[9999]">
       {/* Trigger Button */}
       <button
         onClick={toggleOpen}
@@ -97,9 +97,9 @@ export const WalletPopover = () => {
       <AnimatePresence>
         {isOpen && (
           <>
-            {/* Backdrop to close */}
+            {/* Backdrop to close - high z-index to cover everything */}
             <div
-              className="fixed inset-0 z-40"
+              className="fixed inset-0 z-[9998]"
               onClick={() => setIsOpen(false)}
             />
 
@@ -108,7 +108,7 @@ export const WalletPopover = () => {
               animate={{ opacity: 1, y: 0, scale: 1 }}
               exit={{ opacity: 0, y: 10, scale: 0.95 }}
               transition={{ duration: 0.2 }}
-              className="absolute right-0 top-12 w-[320px] bg-[#fdfbf7] rounded-3xl shadow-xl border border-[#e5e7eb] z-50 overflow-hidden"
+              className="absolute right-0 top-12 w-[320px] bg-[#fdfbf7] rounded-3xl shadow-xl border border-[#e5e7eb] z-[9999] overflow-hidden"
             >
               {/* Header Tabs */}
               <div className="flex items-center justify-between px-6 pt-6 pb-2">

@@ -1,6 +1,6 @@
 /**
  * X402 V2 Session Service
- * 
+ *
  * Implements session-based authentication for the X402 V2 protocol:
  * - Solana wallet signature verification
  * - JWT session token generation
@@ -14,16 +14,20 @@ import bs58 from "bs58";
 import { db } from "../db/index.js";
 import { sessions, nonces } from "../db/schema.js";
 import { eq, and, gt, isNull } from "drizzle-orm";
-import type { 
-  X402Session, 
-  SessionCreateRequest, 
+import type {
+  X402Session,
+  SessionCreateRequest,
   SessionCreateResponse,
-  SessionValidationResult 
+  SessionValidationResult,
 } from "../types/x402-v2.js";
 
 // Configuration
-const SESSION_EXPIRY_HOURS = parseInt(process.env.SESSION_EXPIRY_HOURS || "24", 10);
-const SESSION_SECRET = process.env.SESSION_SECRET || "solomon-x402-secret-change-in-production";
+const SESSION_EXPIRY_HOURS = parseInt(
+  process.env.SESSION_EXPIRY_HOURS || "24",
+  10,
+);
+const SESSION_SECRET =
+  process.env.SESSION_SECRET || "solomon-x402-secret-change-in-production";
 const NONCE_EXPIRY_MINUTES = 10;
 
 /**
@@ -55,7 +59,10 @@ export async function createNonce(walletAddress: string): Promise<string> {
 /**
  * Validate and consume a nonce (marks it as used)
  */
-export async function consumeNonce(nonce: string, walletAddress: string): Promise<boolean> {
+export async function consumeNonce(
+  nonce: string,
+  walletAddress: string,
+): Promise<boolean> {
   const now = new Date();
 
   // Find unused, unexpired nonce for this wallet
@@ -67,8 +74,8 @@ export async function consumeNonce(nonce: string, walletAddress: string): Promis
         eq(nonces.nonce, nonce),
         eq(nonces.walletAddress, walletAddress),
         isNull(nonces.usedAt),
-        gt(nonces.expiresAt, now)
-      )
+        gt(nonces.expiresAt, now),
+      ),
     )
     .limit(1);
 
@@ -77,17 +84,14 @@ export async function consumeNonce(nonce: string, walletAddress: string): Promis
   }
 
   // Mark as used
-  await db
-    .update(nonces)
-    .set({ usedAt: now })
-    .where(eq(nonces.nonce, nonce));
+  await db.update(nonces).set({ usedAt: now }).where(eq(nonces.nonce, nonce));
 
   return true;
 }
 
 /**
  * Verify a Solana wallet signature
- * 
+ *
  * @param message - The original message that was signed
  * @param signature - Base64 or Base58 encoded signature
  * @param publicKeyStr - The Solana wallet public key (Base58)
@@ -95,15 +99,15 @@ export async function consumeNonce(nonce: string, walletAddress: string): Promis
 export function verifySolanaSignature(
   message: string,
   signature: string,
-  publicKeyStr: string
+  publicKeyStr: string,
 ): boolean {
   try {
     // Validate public key format
     const publicKey = new PublicKey(publicKeyStr);
-    
+
     // Decode the message to bytes
     const messageBytes = new TextEncoder().encode(message);
-    
+
     // Try to decode signature (could be Base64 or Base58)
     let signatureBytes: Uint8Array;
     try {
@@ -111,14 +115,14 @@ export function verifySolanaSignature(
       signatureBytes = bs58.decode(signature);
     } catch {
       // Fall back to Base64
-      signatureBytes = Uint8Array.from(Buffer.from(signature, 'base64'));
+      signatureBytes = Uint8Array.from(Buffer.from(signature, "base64"));
     }
 
     // Verify the signature
     const isValid = nacl.sign.detached.verify(
       messageBytes,
       signatureBytes,
-      publicKey.toBytes()
+      publicKey.toBytes(),
     );
 
     return isValid;
@@ -133,7 +137,7 @@ export function verifySolanaSignature(
  */
 function generateSessionId(): string {
   const bytes = nacl.randomBytes(16);
-  const hex = Buffer.from(bytes).toString('hex');
+  const hex = Buffer.from(bytes).toString("hex");
   return `${hex.slice(0, 8)}-${hex.slice(8, 12)}-${hex.slice(12, 16)}-${hex.slice(16, 20)}-${hex.slice(20)}`;
 }
 
@@ -141,7 +145,11 @@ function generateSessionId(): string {
  * Create a simple session token (encoded session data)
  * In production, you might want to use proper JWT
  */
-function encodeSessionToken(sessionId: string, walletAddress: string, expiresAt: Date): string {
+function encodeSessionToken(
+  sessionId: string,
+  walletAddress: string,
+  expiresAt: Date,
+): string {
   const payload = {
     sid: sessionId,
     wal: walletAddress,
@@ -149,33 +157,39 @@ function encodeSessionToken(sessionId: string, walletAddress: string, expiresAt:
   };
   const jsonPayload = JSON.stringify(payload);
   // Simple encoding with a signature
-  const encoded = Buffer.from(jsonPayload).toString('base64');
+  const encoded = Buffer.from(jsonPayload).toString("base64");
   const signature = Buffer.from(
-    nacl.hash(new TextEncoder().encode(encoded + SESSION_SECRET))
-  ).toString('base64').slice(0, 32);
+    nacl.hash(new TextEncoder().encode(encoded + SESSION_SECRET)),
+  )
+    .toString("base64")
+    .slice(0, 32);
   return `${encoded}.${signature}`;
 }
 
 /**
  * Decode and validate a session token
  */
-function decodeSessionToken(token: string): { sessionId: string; walletAddress: string; expiresAt: Date } | null {
+function decodeSessionToken(
+  token: string,
+): { sessionId: string; walletAddress: string; expiresAt: Date } | null {
   try {
-    const [encoded, signature] = token.split('.');
+    const [encoded, signature] = token.split(".");
     if (!encoded || !signature) return null;
 
     // Verify signature
     const expectedSignature = Buffer.from(
-      nacl.hash(new TextEncoder().encode(encoded + SESSION_SECRET))
-    ).toString('base64').slice(0, 32);
-    
+      nacl.hash(new TextEncoder().encode(encoded + SESSION_SECRET)),
+    )
+      .toString("base64")
+      .slice(0, 32);
+
     if (signature !== expectedSignature) {
       console.error("[Session] Invalid token signature");
       return null;
     }
 
     // Decode payload
-    const jsonPayload = Buffer.from(encoded, 'base64').toString('utf8');
+    const jsonPayload = Buffer.from(encoded, "base64").toString("utf8");
     const payload = JSON.parse(jsonPayload);
 
     return {
@@ -193,7 +207,7 @@ function decodeSessionToken(token: string): { sessionId: string; walletAddress: 
  * Create a new authenticated session
  */
 export async function createSession(
-  request: SessionCreateRequest
+  request: SessionCreateRequest,
 ): Promise<SessionCreateResponse | { error: string }> {
   const { walletAddress, signature, message } = request;
 
@@ -211,14 +225,20 @@ export async function createSession(
   }
 
   // Verify signature
-  const signatureValid = verifySolanaSignature(message, signature, walletAddress);
+  const signatureValid = verifySolanaSignature(
+    message,
+    signature,
+    walletAddress,
+  );
   if (!signatureValid) {
     return { error: "Invalid signature" };
   }
 
   // Create session
   const sessionId = generateSessionId();
-  const expiresAt = new Date(Date.now() + SESSION_EXPIRY_HOURS * 60 * 60 * 1000);
+  const expiresAt = new Date(
+    Date.now() + SESSION_EXPIRY_HOURS * 60 * 60 * 1000,
+  );
 
   await db.insert(sessions).values({
     sessionId,
@@ -230,7 +250,9 @@ export async function createSession(
   // Generate token
   const sessionToken = encodeSessionToken(sessionId, walletAddress, expiresAt);
 
-  console.log(`[Session] Created session for ${walletAddress}, expires: ${expiresAt.toISOString()}`);
+  console.log(
+    `[Session] Created session for ${walletAddress}, expires: ${expiresAt.toISOString()}`,
+  );
 
   return {
     sessionToken,
@@ -243,7 +265,7 @@ export async function createSession(
  * Validate a session token
  */
 export async function validateSession(
-  sessionToken: string
+  sessionToken: string,
 ): Promise<SessionValidationResult> {
   // Decode token
   const decoded = decodeSessionToken(sessionToken);
@@ -265,8 +287,8 @@ export async function validateSession(
         eq(sessions.sessionId, decoded.sessionId),
         eq(sessions.walletAddress, decoded.walletAddress),
         isNull(sessions.revokedAt),
-        gt(sessions.expiresAt, new Date())
-      )
+        gt(sessions.expiresAt, new Date()),
+      ),
     )
     .limit(1);
 
@@ -294,12 +316,7 @@ export async function revokeSession(sessionId: string): Promise<boolean> {
   await db
     .update(sessions)
     .set({ revokedAt: new Date() })
-    .where(
-      and(
-        eq(sessions.sessionId, sessionId),
-        isNull(sessions.revokedAt)
-      )
-    );
+    .where(and(eq(sessions.sessionId, sessionId), isNull(sessions.revokedAt)));
 
   return true; // Drizzle doesn't return affected row count easily, assume success
 }
@@ -307,15 +324,17 @@ export async function revokeSession(sessionId: string): Promise<boolean> {
 /**
  * Revoke all sessions for a wallet
  */
-export async function revokeAllSessions(walletAddress: string): Promise<number> {
+export async function revokeAllSessions(
+  walletAddress: string,
+): Promise<number> {
   await db
     .update(sessions)
     .set({ revokedAt: new Date() })
     .where(
       and(
         eq(sessions.walletAddress, walletAddress),
-        isNull(sessions.revokedAt)
-      )
+        isNull(sessions.revokedAt),
+      ),
     );
 
   return 1; // Simplified - in production, return actual count
@@ -324,22 +343,27 @@ export async function revokeAllSessions(walletAddress: string): Promise<number> 
 /**
  * Clean up expired sessions and nonces
  */
-export async function cleanupExpiredData(): Promise<{ sessions: number; nonces: number }> {
+export async function cleanupExpiredData(): Promise<{
+  sessions: number;
+  nonces: number;
+}> {
   const now = new Date();
-  
+
   // Note: Drizzle doesn't support DELETE with lt/gt conditions in all adapters
   // For production, you might need raw SQL or scheduled jobs
   console.log(`[Session] Cleanup triggered at ${now.toISOString()}`);
-  
+
   return { sessions: 0, nonces: 0 };
 }
 
 /**
  * Get session info by wallet address (for debugging/admin)
  */
-export async function getActiveSessions(walletAddress: string): Promise<X402Session[]> {
+export async function getActiveSessions(
+  walletAddress: string,
+): Promise<X402Session[]> {
   const now = new Date();
-  
+
   const activeRecords = await db
     .select()
     .from(sessions)
@@ -347,11 +371,11 @@ export async function getActiveSessions(walletAddress: string): Promise<X402Sess
       and(
         eq(sessions.walletAddress, walletAddress),
         isNull(sessions.revokedAt),
-        gt(sessions.expiresAt, now)
-      )
+        gt(sessions.expiresAt, now),
+      ),
     );
 
-  return activeRecords.map(record => ({
+  return activeRecords.map((record) => ({
     sessionId: record.sessionId,
     walletAddress: record.walletAddress,
     nonce: record.nonce,

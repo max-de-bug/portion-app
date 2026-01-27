@@ -10,6 +10,20 @@
  */
 
 // ============================================
+// X402 V2 Protocol Constants
+// ============================================
+
+export const X402VERSION = 2;
+
+export const X402_HEADERS = {
+  PAYMENT_SIGNATURE: 'payment-signature',
+  PAYMENT_RESPONSE: 'payment-response',
+  AUTHORIZATION: 'authorization',
+  X_SESSION_TOKEN: 'x-session-token', // Legacy
+  X_PAYMENT: 'x-payment',           // Legacy
+} as const;
+
+// ============================================
 // Session Types
 // ============================================
 
@@ -73,9 +87,21 @@ export interface ServiceDiscoveryFilters {
 }
 
 export interface ServiceDiscoveryResponse {
+  version: number;
+  network: string;
   services: X402ServiceMetadata[];
   total: number;
   filters: ServiceDiscoveryFilters;
+}
+
+// Bazaar Discovery V2 Format
+export interface DiscoveryResourceV2 {
+  resource: string;
+  type: 'http' | 'mcp';
+  x402Version: 2;
+  metadata: Record<string, unknown>;
+  lastUpdated: string;
+  accepts: PaymentDetailsV2[];
 }
 
 // ============================================
@@ -125,37 +151,48 @@ export interface PrepaidTransaction {
 }
 
 // ============================================
-// X402 V2 Payment Types
+// X402 V2 Payment Types (Official Spec)
 // ============================================
 
-export interface X402V2PaymentRequest {
-  version: 2;
+export interface PaymentDetailsV2 {
   scheme: 'exact' | 'prepaid' | 'subscription';
-  network: 'solana:mainnet' | 'solana:devnet';
-  sessionToken?: string;
-  prepaidDeduction?: boolean;
-  subscriptionId?: string;
-}
-
-export interface X402V2PaymentRequirements {
-  scheme: 'exact' | 'prepaid';
   network: string;
   maxAmountRequired: string;
   resource: string;
   description: string;
   payTo: string;
   maxTimeoutSeconds: number;
-  acceptsPrepaid: boolean;
-  prepaidBalance?: string;
-  sessionRequired: boolean;
+  asset?: string;
+  mimeType?: string;
+  outputSchema?: {
+    input: { type: string; method?: string };
+    output: unknown;
+  };
+  extra?: Record<string, unknown>;
 }
 
-export interface X402V2ExecuteRequest {
-  input: string;
-  paymentId: string;
-  walletAddress: string;
-  usePrepaid?: boolean;
-  sessionToken?: string;
+export interface PaymentRequiredResponseV2 {
+  x402Version: 2;
+  accepts: PaymentDetailsV2[];
+  resource: string;
+  error?: string;
+}
+
+export interface PaymentPayloadV2 {
+  x402Version: 2;
+  scheme: string;
+  network: string;
+  payload: {
+    paymentId?: string;
+    signature?: string;
+    txSignature?: string; // Solana specific
+    authorization?: {
+      from: string;
+      validAfter: string;
+      validBefore: string;
+      nonce: string;
+    };
+  };
 }
 
 export interface X402V2ExecuteResponse {
@@ -175,8 +212,8 @@ export interface X402V2ExecuteResponse {
   };
   result: unknown;
   session?: {
-    remaining: number;
-    expiresAt: Date;
+    walletAddress?: string;
+    expiresAt?: string | Date;
   };
 }
 

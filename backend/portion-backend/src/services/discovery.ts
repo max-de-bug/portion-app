@@ -77,6 +77,8 @@ export async function discoverServices(
   }));
 
   return {
+    version: 2,
+    network: `solana:${process.env.SOLANA_NETWORK || 'devnet'}`,
     services,
     total: services.length,
     filters: filters || {},

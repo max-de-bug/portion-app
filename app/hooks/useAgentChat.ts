@@ -4,6 +4,7 @@ import { useState, useRef, useEffect, useCallback } from "react";
 import { AI_SERVICES, AIService } from "@/app/config/agent-services";
 import { usePrivy, ConnectedWallet } from "@privy-io/react-auth";
 import { useWallets, useSignAndSendTransaction } from "@privy-io/react-auth/solana";
+import { useX402Session } from "./useX402Session";
 import { Connection, Transaction, clusterApiUrl } from "@solana/web3.js";
 import { useYieldStore } from "@/app/store/useYieldStore";
 import { useTransactionStore } from "@/app/store/useTransactionStore";
@@ -164,6 +165,7 @@ export function useAgentChat(walletAddress: string) {
   const { user, connectWallet } = usePrivy();
   const { wallets } = useWallets();
   const { signAndSendTransaction } = useSignAndSendTransaction();
+  const { getSessionToken, isAuthenticated } = useX402Session(walletAddress);
 
 
   // Local loading state
@@ -220,11 +222,15 @@ export function useAgentChat(walletAddress: string) {
         // Step 1: Prepare payment (with timeout handling)
         const prepareRes = await fetchWithTimeout(`${BACKEND_URL}/x402/prepare`, {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: { 
+            "Content-Type": "application/json",
+            ...(getSessionToken() && { "Authorization": `Bearer ${getSessionToken()}` }),
+          },
           body: JSON.stringify({
             service: service.id,
             walletAddress,
             inputData: userInput,
+            usePrepaid: isAuthenticated // Try to use prepaid if session is active
           }),
         });
 
@@ -240,8 +246,8 @@ export function useAgentChat(walletAddress: string) {
           method: "POST",
           headers: {
             "Content-Type": "application/json",
-            "X-Payment": "yield-authorized",
-            "X-Subscription": hasSubscription ? "active" : "none",
+            "payment-signature": "yield-authorized",
+            ...(getSessionToken() && { "Authorization": `Bearer ${getSessionToken()}` }),
           },
           body: JSON.stringify({
             input: userInput,
