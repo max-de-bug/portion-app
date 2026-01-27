@@ -490,19 +490,27 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
       return reply.status(400).send({ error: "Invalid wallet address" });
     }
 
-    const spendableYield = await getSpendableYield(wallet);
-    const prepaidBalance = await getPrepaidBalance(wallet);
+    try {
+      const spendableYield = await getSpendableYield(wallet);
+      const prepaidBalance = await getPrepaidBalance(wallet);
 
-    return reply.send({
-      wallet,
-      spendableYield,
-      prepaidBalance: prepaidBalance.balance,
-      totalAvailable: spendableYield + parseFloat(prepaidBalance.balance),
-      currency: "USD",
-      source: "sUSDV appreciation + prepaid",
-      network: NETWORK,
-      timestamp: new Date().toISOString(),
-    });
+      return reply.send({
+        wallet,
+        spendableYield,
+        prepaidBalance: prepaidBalance.balance,
+        totalAvailable: spendableYield + parseFloat(prepaidBalance.balance),
+        currency: "USD",
+        source: "sUSDV appreciation + prepaid",
+        network: NETWORK,
+        timestamp: new Date().toISOString(),
+      });
+    } catch (error) {
+      console.error(`[X402] Failed to fetch yield for ${wallet}:`, error);
+      return reply.status(500).send({
+        error: "Failed to fetch yield data",
+        message: error instanceof Error ? error.message : "Checking database connection...",
+      });
+    }
   });
 
   // ============================================
@@ -537,35 +545,36 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
       });
     }
 
-    const sToken = getSessionToken(request);
+    try {
+      const sToken = getSessionToken(request);
 
-    // Session validation (optional for backward compatibility)
-    let sessionValid = false;
-    let sessionInfo: SessionValidationResult | null = null;
-    if (sToken) {
-      sessionInfo = await validateRequestSession(request);
-      sessionValid = sessionInfo.valid;
-    }
+      // Session validation (optional for backward compatibility)
+      let sessionValid = false;
+      let sessionInfo: SessionValidationResult | null = null;
+      if (sToken) {
+        sessionInfo = await validateRequestSession(request);
+        sessionValid = sessionInfo.valid;
+      }
 
-    // Get service info
-    const [serviceInfo] = await db
-      .select()
-      .from(aiServices)
-      .where(eq(aiServices.id, service))
-      .limit(1);
-
-    if (!serviceInfo) {
-      console.warn(`[X402] Service not found in DB: ${service}`);
-      const allServices = await db
-        .select({ id: aiServices.id })
+      // Get service info
+      const [serviceInfo] = await db
+        .select()
         .from(aiServices)
-        .where(eq(aiServices.isActive, true));
-      return reply.status(400).send({
-        error: "Unknown service",
-        requested: service,
-        availableServices: allServices.map((s) => s.id),
-      });
-    }
+        .where(eq(aiServices.id, service))
+        .limit(1);
+
+      if (!serviceInfo) {
+        console.warn(`[X402] Service not found in DB: ${service}`);
+        const allServices = await db
+          .select({ id: aiServices.id })
+          .from(aiServices)
+          .where(eq(aiServices.isActive, true));
+        return reply.status(400).send({
+          error: "Unknown service",
+          requested: service,
+          availableServices: allServices.map((s) => s.id),
+        });
+      }
 
     const basePrice = parseFloat(serviceInfo.price);
     const platformFee = parseFloat(serviceInfo.platformFee);
@@ -704,7 +713,14 @@ const x402Plugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
           }
         : null,
     });
-  });
+    } catch (error) {
+      console.error(`[X402] Failed to prepare payment:`, error);
+      return reply.status(500).send({
+        error: "Failed to prepare payment",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
+    });
 
   /**
    * POST /x402/execute/:service

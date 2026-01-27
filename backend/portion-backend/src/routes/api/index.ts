@@ -40,12 +40,20 @@ const apiPlugin: FastifyPluginAsync = async (fastify, opts): Promise<void> => {
       });
     }
 
-    const yieldInfo = await getYieldInfo(wallet);
+    try {
+      const yieldInfo = await getYieldInfo(wallet);
 
-    return reply.send({
-      ...yieldInfo,
-      spendable: await getSpendableYield(wallet),
-    });
+      return reply.send({
+        ...yieldInfo,
+        spendable: await getSpendableYield(wallet),
+      });
+    } catch (error) {
+      console.error(`[API] Failed to fetch yield for ${wallet}:`, error);
+      return reply.status(500).send({
+        error: "Failed to fetch yield data",
+        message: error instanceof Error ? error.message : "Unknown error",
+      });
+    }
   });
 
   /**
