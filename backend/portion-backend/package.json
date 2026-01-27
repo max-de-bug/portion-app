@@ -12,7 +12,8 @@
     "build:ts": "tsc",
     "watch:ts": "tsc -w",
     "dev": "npm run build:ts && concurrently -k -p \"[{name}]\" -n \"TypeScript,App\" -c \"yellow.bold,cyan.bold\" \"npm:watch:ts\" \"npm:dev:start\"",
-    "dev:start": "cross-env PORT=3001 fastify start --ignore-watch=.ts$ -w -l info -P dist/src/app.js"
+    "dev:start": "cross-env PORT=3001 fastify start --ignore-watch=.ts$ -w -l info -P dist/src/app.js",
+    "seed": "node --loader ts-node/esm src/db/seed.ts"
   },
   "keywords": [
     "x402",
